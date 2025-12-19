@@ -36,11 +36,32 @@ export const authOptions: NextAuthOptions = {
       from: env.SMTP_FROM
     })
   ],
+  session: {
+    strategy: "jwt",
+  },
   secret: env.NEXTAUTH_SECRET,
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        const user = await prisma.user.findUnique({
+          where: { id: token.id as string },
+        })
+
+        if (user) {
+          session.user.id = user.id
+        } else {
+          // User deleted from DB, but valid token exists.
+          // We should invalidate the session.
+          // Returning null/undefined here might break types but effectively kills usage.
+          // A safer way is ensuring session.user is cleared.
+          session.user = undefined as any;
+        }
       }
       return session
     },
