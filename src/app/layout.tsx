@@ -35,7 +35,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider session={session}>{children}</AuthProvider>
-        <Toaster richColors closeButton position="top-right" />
+        <Toaster richColors closeButton position="top-center" />
       </body>
     </html>
   );
