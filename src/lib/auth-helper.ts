@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 export async function authenticateUser() {
   const session = await getServerSession(authOptions);
 
-  if (!session || !session.user) {
+  if (!session?.user?.id) {
     redirect("/auth/signin");
   }
 
