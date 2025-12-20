@@ -8,10 +8,10 @@ export async function proxy(request: NextRequest) {
     req: request,
     secret: env.NEXTAUTH_SECRET,
   })
-  if (!session) {
+  if (!session && request.nextUrl.pathname !== "/auth/signin") {
     return NextResponse.redirect(new URL('/auth/signin', request.url))
   }
-  if (request.nextUrl.pathname === "/auth/signin") {
+  if (session && request.nextUrl.pathname === "/auth/signin") {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
   return NextResponse.next();

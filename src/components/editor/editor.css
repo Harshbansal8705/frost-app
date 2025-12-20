@@ -1,0 +1,8 @@
+/* Tiptap Placeholder Styles */
+.tiptap p.is-editor-empty:first-child::before {
+  color: #64748b; /* text-slate-500 */
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
