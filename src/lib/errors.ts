@@ -11,6 +11,15 @@ export class FrostError extends Error {
   }
 }
 
+function isRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    typeof (error as { digest?: string }).digest === "string" &&
+    (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 export function handleFrostError(error: unknown) {
   console.error("[FROST_ERROR]", error);
 
@@ -35,6 +44,9 @@ export function safeAPI<T = unknown, P = any>(handler: APIHandler<T, P>): APIHan
     try {
       return await handler(req, params);
     } catch (error) {
+      if (isRedirectError(error)) {
+        throw error;
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return handleFrostError(error) as any;
     }
