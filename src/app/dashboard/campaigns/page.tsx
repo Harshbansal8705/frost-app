@@ -9,7 +9,7 @@ export default async function CampaignsPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
-    redirect("/login");
+    redirect("/auth/signin");
   }
 
   const user = await prisma.user.findUnique({
@@ -17,7 +17,7 @@ export default async function CampaignsPage() {
   });
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth/signin");
   }
 
   const campaigns = await prisma.campaign.findMany({
