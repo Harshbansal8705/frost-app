@@ -31,7 +31,13 @@ export function NewCampaignWizard() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
+  const nextStep = () => {
+    if (currentStep === 1 && !formData.name.trim()) {
+      alert("Please enter a campaign name");
+      return;
+    }
+    setCurrentStep((prev) => Math.min(prev + 1, 4));
+  };
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
   // --- Manual Lead Entry ---
