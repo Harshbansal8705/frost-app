@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { ArrowLeft, ArrowRight, Check, FileText, Users, Calendar, Rocket, Plus, Trash2, Upload, Loader2, Bold, Italic, Paperclip, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowRight, Check, FileText, Users, Rocket, Plus, Trash2, Loader2, Paperclip, X } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RichTextEditor } from "@/components/editor/RichTextEditor";
+import { TemplateForm } from "@/components/templates/TemplateForm";
 
 const steps = [
   { id: 1, name: "Setup", icon: FileText },
@@ -21,19 +21,82 @@ export function NewCampaignWizard() {
   const [formData, setFormData] = useState({
     name: "",
     leads: [] as { name: string; email: string; company: string }[],
-    sequence: [{ subject: "", body: "", delay: 0, attachments: [] as string[] }]
+    sequence: [] as { id: string; templateId: string; subject: string; body: string; delay: number; attachments: string[] }[]
   });
+
+  // Template Modal State
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null);
+  const [isAddingStep, setIsAddingStep] = useState(false);
 
   // Manual Entry State
   const [newLead, setNewLead] = useState({ name: "", email: "", company: "" });
 
-  // File Upload State
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Templates State
+  const [templates, setTemplates] = useState<{ id: string; name: string; subject: string; body: string; attachments: string[] }[]>([]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = () => {
+    fetch("/api/templates")
+      .then(res => res.json())
+      .then(data => setTemplates(data))
+      .catch(err => console.error("Failed to load templates", err));
+  };
+
+  const loadTemplate = (stepIndex: number, templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+
+    // If step exists and has template, confirm replacement
+    if (formData.sequence[stepIndex] && formData.sequence[stepIndex].templateId && !confirm("Replace current template?")) return;
+
+    const newSequence = [...formData.sequence];
+
+    if (stepIndex === newSequence.length) {
+      // Adding new step
+      newSequence.push({
+        id: `temp-${Date.now()}`,
+        templateId: template.id,
+        subject: template.subject,
+        body: template.body,
+        attachments: template.attachments || [],
+        delay: stepIndex === 0 ? 0 : 2
+      });
+      setIsAddingStep(false);
+    } else {
+      // Updating existing step
+      newSequence[stepIndex] = {
+        ...newSequence[stepIndex],
+        templateId: template.id,
+        subject: template.subject,
+        body: template.body,
+        attachments: template.attachments || []
+      };
+    }
+
+    setFormData(prev => ({ ...prev, sequence: newSequence }));
+  };
+
+  const handleTemplateCreated = (newTemplate: any) => {
+    setTemplates(prev => [newTemplate, ...prev]);
+    setIsTemplateModalOpen(false);
+
+    if (activeStepIndex !== null) {
+      loadTemplate(activeStepIndex, newTemplate.id);
+      setActiveStepIndex(null);
+    }
+  };
 
   const nextStep = () => {
     if (currentStep === 1 && !formData.name.trim()) {
       alert("Please enter a campaign name");
+      return;
+    }
+    if (currentStep === 3 && formData.sequence.length === 0) {
+      alert("Please add at least one email to your sequence");
       return;
     }
     setCurrentStep((prev) => Math.min(prev + 1, 4));
@@ -57,53 +120,9 @@ export function NewCampaignWizard() {
     }));
   };
 
-  // --- File Upload ---
-  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>, stepIndex: number) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    setError(null);
-    try {
-      const uploadFormData = new FormData();
-      uploadFormData.append("file", file);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: uploadFormData,
-      });
-
-      if (!res.ok) throw new Error("Upload failed");
-
-      const { url } = await res.json();
-
-      const newSequence = [...formData.sequence];
-      newSequence[stepIndex].attachments = [...(newSequence[stepIndex].attachments || []), url];
-      setFormData(prev => ({ ...prev, sequence: newSequence }));
-
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to upload file. Please try again.");
-    } finally {
-      setIsUploading(false);
-      // Construct a new file input to allow re-uploading same file if needed
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const removeAttachment = (stepIndex: number, attachIndex: number) => {
-    const newSequence = [...formData.sequence];
-    newSequence[stepIndex].attachments = newSequence[stepIndex].attachments.filter((_, i) => i !== attachIndex);
-    setFormData(prev => ({ ...prev, sequence: newSequence }));
-  };
-
-
   // --- Sequence Management ---
   const addStep = () => {
-    setFormData(prev => ({
-      ...prev,
-      sequence: [...prev.sequence, { subject: "", body: "", delay: 2, attachments: [] }]
-    }));
+    setIsAddingStep(true);
   };
 
   const removeStep = (index: number) => {
@@ -290,97 +309,165 @@ export function NewCampaignWizard() {
             <h3 className="text-xl font-bold text-white mb-6">Email Sequence</h3>
 
             <div className="space-y-6">
-              {formData.sequence.map((step, idx) => (
-                <div key={idx} className="bg-black/20 border border-white/10 rounded-lg p-6 relative group">
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              {formData.sequence.map((step, idx) => {
+                const linkedTemplate = templates.find(t => t.id === step.templateId);
+
+                return (
+                  <div key={step.id || idx} className="bg-black/20 border border-white/10 rounded-lg p-6 relative group">
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => removeStep(idx)}
+                        className="text-slate-500 hover:text-red-400"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-xs font-medium text-cyan-400 bg-cyan-950/30 px-2 py-1 rounded uppercase tracking-wide">
+                        {idx === 0 ? "First Mail" : `Follow Up ${idx}`}
+                      </span>
+
+                      {idx > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-slate-400">
+                          <span>Wait</span>
+                          <input
+                            type="number"
+                            value={step.delay}
+                            onChange={(e) => updateStep(idx, "delay", parseInt(e.target.value))}
+                            className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-center"
+                          />
+                          <span>days</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Template Selection */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Linked Template</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={step.templateId}
+                          onChange={(e) => {
+                            if (e.target.value === "NEW") {
+                              setActiveStepIndex(idx);
+                              setIsTemplateModalOpen(true);
+                            } else {
+                              loadTemplate(idx, e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none"
+                        >
+                          <option value="" disabled>Select a template...</option>
+                          <option value="NEW">+ Create New Template</option>
+                          <option disabled>──────────</option>
+                          {templates.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Preview of Linked Template */}
+                    {linkedTemplate ? (
+                      <div className="bg-white/5 rounded border border-white/5 p-4">
+                        <div className="mb-2">
+                          <span className="text-xs text-slate-500 uppercase">Subject</span>
+                          <div className="text-sm font-medium text-white">{linkedTemplate.subject}</div>
+                        </div>
+                        <div>
+                          <span className="text-xs text-slate-500 uppercase">Body Preview</span>
+                          <div className="text-sm text-slate-400 line-clamp-2">{linkedTemplate.body.replace(/<[^>]*>?/gm, "")}</div>
+                        </div>
+                        {linkedTemplate.attachments.length > 0 && (
+                          <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
+                            <Paperclip size={12} />
+                            {linkedTemplate.attachments.length} Attachment(s)
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 border border-dashed border-white/10 rounded">
+                        <p className="text-sm text-slate-500">No template selected.</p>
+                      </div>
+                    )}
+
+                  </div>
+                );
+              })}
+
+              {/* Selector for adding a new step */}
+              {isAddingStep && (
+                <div className="bg-black/20 border border-cyan-500/30 rounded-lg p-6 relative animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-medium text-cyan-400 bg-cyan-950/30 px-2 py-1 rounded uppercase tracking-wide">
+                      {formData.sequence.length === 0 ? "First Mail" : `Follow Up ${formData.sequence.length}`}
+                    </span>
                     <button
-                      onClick={() => removeStep(idx)}
-                      className="text-slate-500 hover:text-red-400"
+                      onClick={() => setIsAddingStep(false)}
+                      className="text-slate-500 hover:text-white"
                     >
-                      <Trash2 size={16} />
+                      <X size={16} />
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-medium text-cyan-400 bg-cyan-950/30 px-2 py-1 rounded uppercase tracking-wide">
-                      {idx === 0 ? "First Mail" : `Follow Up ${idx}`}
-                    </span>
-
-                    {idx > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-slate-400">
-                        <span>Wait</span>
-                        <input
-                          type="number"
-                          value={step.delay}
-                          onChange={(e) => updateStep(idx, "delay", parseInt(e.target.value))}
-                          className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-center"
-                        />
-                        <span>days</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <input
-                    type="text"
-                    value={step.subject}
-                    onChange={(e) => updateStep(idx, "subject", e.target.value)}
-                    placeholder="Subject line"
-                    className="w-full bg-transparent border-0 border-b border-white/10 px-0 py-2 text-lg font-medium text-white placeholder-slate-500 focus:ring-0 focus:border-cyan-500 mb-4 outline-none"
-                  />
-
                   <div className="mb-4">
-                    <RichTextEditor
-                      content={step.body}
-                      onChange={(html) => updateStep(idx, "body", html)}
-                      placeholder="Hi {{firstName}}, ..."
-                    />
-                  </div>
-
-                  {/* Attachments Section */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg cursor-pointer transition-colors">
-                        <Paperclip size={14} />
-                        <span>Attach File</span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          ref={fileInputRef}
-                          onChange={(e) => handleAttachmentUpload(e, idx)}
-                          disabled={isUploading}
-                        />
-                      </label>
-                      {isUploading && <Loader2 size={14} className="animate-spin text-cyan-400" />}
-                    </div>
-
-                    {/* Attachment List */}
-                    {step.attachments && step.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/5">
-                        {step.attachments.map((url, i) => (
-                          <div key={i} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10 text-xs text-slate-300">
-                            <Paperclip size={12} className="text-cyan-400" />
-                            <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline max-w-[150px] truncate">
-                              {url.split('/').pop()}
-                            </a>
-                            <button onClick={() => removeAttachment(idx, i)} className="text-slate-500 hover:text-red-400 ml-1">
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Select Template</label>
+                    <select
+                      autoFocus
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value === "NEW") {
+                          setActiveStepIndex(formData.sequence.length);
+                          setIsTemplateModalOpen(true);
+                        } else {
+                          loadTemplate(formData.sequence.length, e.target.value);
+                        }
+                      }}
+                      className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none"
+                    >
+                      <option value="" disabled>Choose a template...</option>
+                      <option value="NEW">+ Create New Template</option>
+                      <option disabled>──────────</option>
+                      {templates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
+              )}
 
-              <button
-                onClick={addStep}
-                className="w-full py-4 border-2 border-dashed border-white/10 rounded-lg text-slate-500 hover:border-cyan-500/30 hover:text-cyan-400 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus size={18} />
-                Add Follow-up
-              </button>
+              {!isAddingStep && (
+                <button
+                  onClick={addStep}
+                  className="w-full py-4 border-2 border-dashed border-white/10 rounded-lg text-slate-500 hover:border-cyan-500/30 hover:text-cyan-400 transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus size={18} />
+                  {formData.sequence.length === 0 ? "Add First Mail" : "Add Follow-up"}
+                </button>
+              )}
             </div>
+
+
+            {/* Template Creation Modal */}
+            {isTemplateModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900 z-10">
+                    <h3 className="text-lg font-bold text-white">Create New Template</h3>
+                    <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-500 hover:text-white">
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <TemplateForm
+                      onSuccess={handleTemplateCreated}
+                      onCancel={() => setIsTemplateModalOpen(false)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

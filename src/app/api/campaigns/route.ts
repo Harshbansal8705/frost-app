@@ -5,16 +5,14 @@ import { authenticateUser } from "@/lib/auth-helper";
 export async function POST(req: Request) {
   try {
     const session = await authenticateUser();
-    if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
     const body = await req.json();
-    const { name, leads, sequence } = body;
+    let { name, leads, sequence } = body;
 
-    if (!name || !sequence || sequence.length === 0) {
-      return new NextResponse("Missing required fields", { status: 400 });
+    if (!name) {
+      return new NextResponse("Missing Campaign name", { status: 400 });
     }
+
+    if (!sequence) sequence = [];
 
     // Transaction to ensure everything is created or nothing is
     const campaign = await prisma.$transaction(async (tx) => {
@@ -57,26 +55,29 @@ export async function POST(req: Request) {
         });
       }
 
-      // 3. Create Templates & Sequence
+      // 3. Create Templates (if needed) & Link Sequence
       for (let i = 0; i < sequence.length; i++) {
         const step = sequence[i];
+        let templateId = step.templateId;
 
-        const template = await tx.template.create({
-          data: {
-            name: `${name} - Step ${i + 1}`,
-            subject: step.subject,
-            body: step.body,
-            attachments: step.attachments || [],
-            userId: session.user.id,
-          }
-        });
+        if (!templateId) {
+          throw new Error("Invalid template data: Template ID is required");
+        }
 
         await tx.campaignTemplate.create({
           data: {
-            campaignId: camp.id,
-            templateId: template.id,
+            campaign: {
+              connect: {
+                id: camp.id
+              }
+            },
+            template: {
+              connect: {
+                id: templateId
+              }
+            },
             sequence: i,
-            delay: step.delay || 0,
+            delay: i ? step.delay : 0,
           }
         });
       }
