@@ -1,5 +1,6 @@
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { getSettings } from "./actions";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Settings | Frost",
@@ -7,7 +8,12 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-  const settings = await getSettings();
+  let settings;
+  try {
+    settings = await getSettings();
+  } catch (error: any) {
+    redirect("/auth/signin");
+  }
 
   return (
     <div className="max-w-6xl">

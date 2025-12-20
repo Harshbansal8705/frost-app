@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Trash2, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Template {
   id: string;
@@ -42,9 +43,10 @@ export function TemplateList() {
     try {
       const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
+      toast.success("Template deleted");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete template");
+      toast.error("Failed to delete template");
       fetchTemplates();
     }
   };

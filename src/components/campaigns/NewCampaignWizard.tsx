@@ -5,6 +5,7 @@ import { ArrowRight, Check, FileText, Users, Rocket, Plus, Trash2, Loader2, Pape
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { TemplateForm } from "@/components/templates/TemplateForm";
 
 const steps = [
@@ -92,11 +93,11 @@ export function NewCampaignWizard() {
 
   const nextStep = () => {
     if (currentStep === 1 && !formData.name.trim()) {
-      alert("Please enter a campaign name");
+      toast.error("Please enter a campaign name");
       return;
     }
     if (currentStep === 3 && formData.sequence.length === 0) {
-      alert("Please add at least one email to your sequence");
+      toast.error("Please add at least one email to your sequence");
       return;
     }
     setCurrentStep((prev) => Math.min(prev + 1, 4));
@@ -157,10 +158,12 @@ export function NewCampaignWizard() {
         throw new Error(msg || "Failed to create campaign");
       }
 
+      toast.success("Campaign created successfully!");
       router.push("/dashboard/campaigns");
       router.refresh();
     } catch (err: any) {
       console.error(err);
+      toast.error(err.message || "Failed to create campaign");
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);

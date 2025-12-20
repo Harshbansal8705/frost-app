@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Save, Loader2, Paperclip, X } from "lucide-react";
+import { toast } from "sonner";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 
 interface TemplateFormProps {
@@ -39,9 +40,10 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       setAttachments(prev => [...prev, data.url]);
+      toast.success("File uploaded");
     } catch (err) {
       console.error(err);
-      alert("Failed to upload file");
+      toast.error("Failed to upload file");
     } finally {
       setIsUploading(false);
       e.target.value = "";
@@ -55,7 +57,7 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.subject || !formData.body) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
       return;
     }
 
@@ -72,8 +74,10 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
       if (!res.ok) throw new Error("Failed to create template");
 
       const newTemplate = await res.json();
+      toast.success("Template saved");
       onSuccess(newTemplate);
     } catch (err: any) {
+      toast.error(err.message || "Failed to save template");
       setError(err.message);
     } finally {
       setIsSubmitting(false);

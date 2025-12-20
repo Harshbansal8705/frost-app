@@ -4,11 +4,13 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { FrostError } from "@/lib/errors";
 
 export async function getSettings() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    redirect("/auth/signin");
   }
 
   const user = await prisma.user.findUnique({
@@ -19,7 +21,7 @@ export async function getSettings() {
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new FrostError("User not found", 404);
   }
 
   return {
@@ -32,7 +34,7 @@ export async function getSettings() {
 export async function updateProfile(data: { name: string }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    redirect("/auth/signin");
   }
 
   await prisma.user.update({
@@ -57,7 +59,7 @@ export async function updateEmailSettings(data: {
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    redirect("/auth/signin");
   }
 
   // Check if settings exist to know if we are creating or updating

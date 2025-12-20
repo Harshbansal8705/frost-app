@@ -4,6 +4,7 @@ import { useState } from "react";
 import { updateProfile, updateEmailSettings } from "@/app/dashboard/settings/actions";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 // Simple UI components to avoid dependency on missing UI library
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -68,10 +69,11 @@ export function SettingsForm({ initialData }: { initialData: any }) {
     setLoading(true);
     try {
       await updateProfile(profile);
-      router.refresh(); // Refresh server components
+      router.refresh();
+      toast.success("Profile updated successfully");
     } catch (error) {
       console.error(error);
-      alert("Failed to update profile");
+      toast.error("Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -89,10 +91,10 @@ export function SettingsForm({ initialData }: { initialData: any }) {
       router.refresh();
       // Clear passwords from state for security after save
       setEmailSettings(prev => ({ ...prev, smtpPassword: "", imapPassword: "" }));
-      alert("Email settings saved successfully");
+      toast.success("Email settings saved successfully");
     } catch (error) {
       console.error(error);
-      alert("Failed to save email settings");
+      toast.error("Failed to save email settings");
     } finally {
       setLoading(false);
     }
