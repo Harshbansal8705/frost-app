@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Send,
-  Users,
+  FileText,
   Settings,
   Zap,
   LogOut
@@ -15,7 +15,7 @@ import clsx from "clsx";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Campaigns", href: "/dashboard/campaigns", icon: Send },
-  { name: "Contacts", href: "/dashboard/contacts", icon: Users },
+  { name: "Templates", href: "/dashboard/templates", icon: FileText },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
