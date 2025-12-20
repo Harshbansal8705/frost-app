@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { APIHandler } from "@/types";
 
 export class FrostError extends Error {
   code: number;
@@ -27,17 +28,15 @@ export function handleFrostError(error: unknown) {
 }
 
 // Wrapper for API routes to enforce global error handling
-type APIHandler<T = any> = (
-  req: Request,
-  params: any
-) => Promise<NextResponse<T>> | Promise<Response>;
 
-export function safeAPI(handler: APIHandler): APIHandler {
-  return async (req: Request, params: any) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function safeAPI<T = unknown, P = any>(handler: APIHandler<T, P>): APIHandler<T, P> {
+  return async (req: Request, params: { params: Promise<P> }) => {
     try {
       return await handler(req, params);
     } catch (error) {
-      return handleFrostError(error);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return handleFrostError(error) as any;
     }
   };
 }

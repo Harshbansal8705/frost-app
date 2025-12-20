@@ -60,7 +60,7 @@ export const authOptions: NextAuthOptions = {
           // We should invalidate the session.
           // Returning null/undefined here might break types but effectively kills usage.
           // A safer way is ensuring session.user is cleared.
-          session.user = undefined as any;
+          session.user = undefined;
         }
       }
       return session

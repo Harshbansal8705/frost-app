@@ -39,7 +39,7 @@ export default function Home() {
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white max-w-4xl mb-6 leading-[1.1]">
           Cold outreach that <br />
           <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-400 via-blue-500 to-purple-600">
-            doesn't feel cold.
+            doesn&apos;t feel cold.
           </span>
         </h1>
 

@@ -41,7 +41,9 @@ const HelperText = ({ children }: { children: React.ReactNode }) => (
   <p className="text-xs text-slate-500 mt-1">{children}</p>
 );
 
-export function SettingsForm({ initialData }: { initialData: any }) {
+import { SettingsData } from "@/types";
+
+export function SettingsForm({ initialData }: { initialData: SettingsData }) {
   const [activeTab, setActiveTab] = useState<"profile" | "email">("profile");
   const [loading, setLoading] = useState(false);
   const session = useSession();
@@ -51,7 +53,18 @@ export function SettingsForm({ initialData }: { initialData: any }) {
     name: initialData.name || "",
   });
 
-  const [emailSettings, setEmailSettings] = useState({
+  const [emailSettings, setEmailSettings] = useState<{
+    fromName: string;
+    fromEmail: string;
+    smtpHost: string;
+    smtpPort: number | string;
+    smtpUser: string;
+    smtpPassword?: string;
+    imapHost: string;
+    imapPort: number | string;
+    imapUser: string;
+    imapPassword?: string;
+  }>({
     fromName: initialData.emailSettings?.fromName || session.data?.user?.name || "",
     fromEmail: initialData.emailSettings?.fromEmail || session.data?.user?.email || "",
     smtpHost: initialData.emailSettings?.smtpHost || "smtp.gmail.com",
@@ -106,7 +119,7 @@ export function SettingsForm({ initialData }: { initialData: any }) {
         {["profile", "email"].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab as "profile" | "email")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab
               ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
               : "text-slate-400 hover:text-white hover:bg-white/5"

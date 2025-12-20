@@ -7,6 +7,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { FrostError } from "@/lib/errors";
 
+export interface EmailSettingsPayload {
+  fromName?: string;
+  fromEmail?: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPassword?: string;
+  imapHost: string;
+  imapPort: number;
+  imapUser: string;
+  imapPassword?: string;
+}
+
+export interface ProfilePayload {
+  name: string;
+}
+
 export async function getSettings() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -31,7 +48,7 @@ export async function getSettings() {
   };
 }
 
-export async function updateProfile(data: { name: string }) {
+export async function updateProfile(data: ProfilePayload) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     redirect("/auth/signin");
@@ -45,18 +62,7 @@ export async function updateProfile(data: { name: string }) {
   revalidatePath("/dashboard/settings");
 }
 
-export async function updateEmailSettings(data: {
-  fromName?: string;
-  fromEmail?: string;
-  smtpHost: string;
-  smtpPort: number;
-  smtpUser: string;
-  smtpPassword?: string;
-  imapHost: string;
-  imapPort: number;
-  imapUser: string;
-  imapPassword?: string;
-}) {
+export async function updateEmailSettings(data: EmailSettingsPayload) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     redirect("/auth/signin");
@@ -67,7 +73,7 @@ export async function updateEmailSettings(data: {
     where: { userId: session.user.id },
   });
 
-  const settingsData: any = {
+  const settingsData = {
     fromName: data.fromName,
     fromEmail: data.fromEmail,
     smtpHost: data.smtpHost,
@@ -76,15 +82,9 @@ export async function updateEmailSettings(data: {
     imapHost: data.imapHost,
     imapPort: data.imapPort,
     imapUser: data.imapUser,
+    smtpPassword: data.smtpPassword,
+    imapPassword: data.imapPassword,
   };
-
-  // Only update passwords if provided
-  if (data.smtpPassword) {
-    settingsData.smtpPassword = data.smtpPassword;
-  }
-  if (data.imapPassword) {
-    settingsData.imapPassword = data.imapPassword;
-  }
 
   if (existingSettings) {
     await prisma.emailSettings.update({
@@ -92,11 +92,6 @@ export async function updateEmailSettings(data: {
       data: settingsData,
     });
   } else {
-    // For creation, passwords are required if we are strict, but here we proceed.
-    // Ensure we pass passwords if they are present
-    if (data.smtpPassword) settingsData.smtpPassword = data.smtpPassword;
-    if (data.imapPassword) settingsData.imapPassword = data.imapPassword;
-
     await prisma.emailSettings.create({
       data: {
         userId: session.user.id,

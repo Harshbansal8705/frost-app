@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   let settings;
   try {
     settings = await getSettings();
-  } catch (error: any) {
+  } catch {
     redirect("/auth/signin");
   }
 
@@ -26,7 +26,7 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <SettingsForm initialData={settings} />
+      <SettingsForm initialData={{ ...settings, name: settings.name || "" }} />
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { authenticateUser } from "@/lib/auth-helper";
 export const POST = safeAPI(async (req: Request) => {
   const session = await authenticateUser();
   const body = await req.json();
-  let { name, leads, sequence } = body;
+  const { name, leads } = body;
+  let { sequence } = body;
 
   if (!name) {
     throw new FrostError("Missing Campaign name", 400);
@@ -58,7 +59,7 @@ export const POST = safeAPI(async (req: Request) => {
     // 3. Create Templates (if needed) & Link Sequence
     for (let i = 0; i < sequence.length; i++) {
       const step = sequence[i];
-      let templateId = step.templateId;
+      const templateId = step.templateId;
 
       if (!templateId) {
         throw new FrostError("Invalid template data: Template ID is required", 400);

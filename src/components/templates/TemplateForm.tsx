@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Save, Loader2, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
+import { Template } from "@/types";
 
 interface TemplateFormProps {
   initialData?: {
@@ -12,7 +13,7 @@ interface TemplateFormProps {
     body: string;
     attachments: string[];
   };
-  onSuccess: (template: any) => void;
+  onSuccess: (template: Template) => void;
   onCancel?: () => void;
 }
 
@@ -76,9 +77,10 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
       const newTemplate = await res.json();
       toast.success("Template saved");
       onSuccess(newTemplate);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save template");
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save template";
+      toast.error(message);
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

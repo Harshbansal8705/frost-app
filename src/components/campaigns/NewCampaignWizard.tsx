@@ -15,14 +15,16 @@ const steps = [
   { id: 4, name: "Review", icon: Check },
 ];
 
+import { Template, Lead, SequenceStep } from "@/types";
+
 export function NewCampaignWizard() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    leads: [] as { name: string; email: string; company: string }[],
-    sequence: [] as { id: string; templateId: string; subject: string; body: string; delay: number; attachments: string[] }[]
+    leads: [] as Lead[],
+    sequence: [] as SequenceStep[]
   });
 
   // Template Modal State
@@ -34,7 +36,7 @@ export function NewCampaignWizard() {
   const [newLead, setNewLead] = useState({ name: "", email: "", company: "" });
 
   // Templates State
-  const [templates, setTemplates] = useState<{ id: string; name: string; subject: string; body: string; attachments: string[] }[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
 
   useEffect(() => {
     fetchTemplates();
@@ -81,7 +83,7 @@ export function NewCampaignWizard() {
     setFormData(prev => ({ ...prev, sequence: newSequence }));
   };
 
-  const handleTemplateCreated = (newTemplate: any) => {
+  const handleTemplateCreated = (newTemplate: Template) => {
     setTemplates(prev => [newTemplate, ...prev]);
     setIsTemplateModalOpen(false);
 
@@ -133,7 +135,7 @@ export function NewCampaignWizard() {
     }));
   };
 
-  const updateStep = (index: number, field: string, value: any) => {
+  const updateStep = (index: number, field: string, value: string | number) => {
     const newSequence = [...formData.sequence];
     newSequence[index] = { ...newSequence[index], [field]: value };
     setFormData(prev => ({ ...prev, sequence: newSequence }));
@@ -161,10 +163,11 @@ export function NewCampaignWizard() {
       toast.success("Campaign created successfully!");
       router.push("/dashboard/campaigns");
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message || "Failed to create campaign");
-      setError(err.message || "Something went wrong. Please try again.");
+      const message = err instanceof Error ? err.message : "Failed to create campaign";
+      toast.error(message);
+      setError(message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

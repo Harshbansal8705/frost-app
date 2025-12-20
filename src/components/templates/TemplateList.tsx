@@ -5,13 +5,7 @@ import Link from "next/link";
 import { Plus, Trash2, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface Template {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-  createdAt: string;
-}
+import { Template } from "@/types";
 
 export function TemplateList() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -28,8 +22,12 @@ export function TemplateList() {
       if (!res.ok) throw new Error("Failed to fetch templates");
       const data = await res.json();
       setTemplates(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, User } from "lucide-react";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 
 export function TopNav() {
@@ -26,7 +27,15 @@ export function TopNav() {
           </div>
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-lg">
             {session?.user?.image ? (
-              <img src={session.user.image} alt="Profile" className="h-full w-full rounded-full object-cover" />
+              <div className="relative h-full w-full">
+                <Image
+                  src={session.user.image}
+                  alt="Profile"
+                  fill
+                  className="rounded-full object-cover"
+                  unoptimized
+                />
+              </div>
             ) : (
               <User size={16} />
             )}

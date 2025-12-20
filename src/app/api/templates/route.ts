@@ -3,6 +3,7 @@ import { FrostError, safeAPI } from "@/lib/errors";
 import prisma from "@/lib/prisma";
 import { authenticateUser } from "@/lib/auth-helper";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const GET = safeAPI(async (req: Request) => {
   const session = await authenticateUser();
 
