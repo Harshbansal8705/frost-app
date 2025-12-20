@@ -32,13 +32,14 @@ model User {
   accounts      Account[]
   sessions      Session[]
 
-  contacts    Contact[]
-  companies   Company[]
-  templates   Template[]
-  campaigns   Campaign[]
-  preferences Preferences?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  contacts      Contact[]
+  companies     Company[]
+  templates     Template[]
+  campaigns     Campaign[]
+  preferences   Preferences?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  emailSettings EmailSettings?
 }
 
 model Account {
@@ -175,4 +176,23 @@ model EmailLog {
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
   contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model EmailSettings {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  fromName     String?
+  fromEmail    String?
+  smtpHost     String   @default("smtp.gmail.com")
+  smtpPort     Int      @default(587)
+  smtpUser     String
+  smtpPassword String?
+  imapHost     String   @default("imap.gmail.com")
+  imapPort     Int      @default(993)
+  imapUser     String
+  imapPassword String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

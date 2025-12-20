@@ -66,4 +66,28 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
+  events: {
+    async createUser(message) {
+      const { user } = message;
+      await prisma.emailSettings.create({
+        data: {
+          user: {
+            connect: {
+              id: user.id,
+            }
+          },
+          fromName: user.name || "",
+          fromEmail: user.email || "",
+          smtpHost: "smtp.gmail.com",
+          smtpPort: 587,
+          smtpUser: user.email || "",
+          smtpPassword: "",
+          imapHost: "imap.gmail.com",
+          imapPort: 993,
+          imapUser: user.email || "",
+          imapPassword: "",
+        },
+      });
+    },
+  },
 }
