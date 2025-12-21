@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { FrostError, safeAPI } from "@/lib/errors";
+import { safeAPI } from "@/lib/utils";
 import prisma from "@/lib/prisma";
-import { authenticateUser } from "@/lib/auth-helper";
+import { FrostError, FrostSession } from "@/types";
 
-export const POST = safeAPI(async (req: Request) => {
-  const session = await authenticateUser();
+export const POST = safeAPI(async (req: Request, session: FrostSession) => {
   const body = await req.json();
   const { name, leads } = body;
   let { sequence } = body;

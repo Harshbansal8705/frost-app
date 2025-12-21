@@ -1,3 +1,20 @@
+import { NextResponse } from "next/server";
+import { Session } from "next-auth";
+
+export interface FrostSession extends Session {
+  user: { id: string };
+}
+
+export class FrostError extends Error {
+  code: number;
+
+  constructor(message: string, code: number = 500) {
+    super(message);
+    this.name = "FrostError";
+    this.code = code;
+  }
+}
+
 export interface Template {
   id: string;
   name: string;
@@ -23,10 +40,14 @@ export interface SettingsData {
   } | null;
 }
 
-import { NextResponse } from "next/server";
-
 export type APIHandler<T = unknown, P = unknown> = (
   req: Request,
+  params: { params: Promise<P> }
+) => Promise<NextResponse<T>> | Promise<Response>;
+
+export type AuthenticatedAPIHandler<T = unknown, P = unknown> = (
+  req: Request,
+  session: FrostSession,
   params: { params: Promise<P> }
 ) => Promise<NextResponse<T>> | Promise<Response>;
 

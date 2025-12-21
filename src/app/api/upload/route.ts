@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
-import { FrostError, safeAPI } from "@/lib/errors";
+import { safeAPI } from "@/lib/utils";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { authenticateUser } from "@/lib/auth-helper";
+import { FrostError } from "@/types";
 
 export const POST = safeAPI(async (req: Request) => {
-  const session = await authenticateUser();
-  if (!session?.user) {
-    throw new FrostError("Unauthorized", 401);
-  }
-
   const formData = await req.formData();
   const file = formData.get("file") as File;
 

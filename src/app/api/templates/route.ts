@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { FrostError, safeAPI } from "@/lib/errors";
+import { safeAPI } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import { authenticateUser } from "@/lib/auth-helper";
+import { FrostError } from "@/types";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const GET = safeAPI(async (req: Request) => {

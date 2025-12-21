@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
-import { APIHandler } from "@/types";
-
-export class FrostError extends Error {
-  code: number;
-
-  constructor(message: string, code: number = 500) {
-    super(message);
-    this.name = "FrostError";
-    this.code = code;
-  }
-}
+import { APIHandler, AuthenticatedAPIHandler, FrostError } from "@/types";
+import { authenticateUser } from "./auth-helper";
 
 function isRedirectError(error: unknown): boolean {
   return (
@@ -39,10 +30,11 @@ export function handleFrostError(error: unknown) {
 // Wrapper for API routes to enforce global error handling
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function safeAPI<T = unknown, P = any>(handler: APIHandler<T, P>): APIHandler<T, P> {
+export function safeAPI<T = unknown, P = any>(handler: AuthenticatedAPIHandler<T, P>): APIHandler<T, P> {
   return async (req: Request, params: { params: Promise<P> }) => {
     try {
-      return await handler(req, params);
+      const session = await authenticateUser();
+      return await handler(req, session, params);
     } catch (error) {
       if (isRedirectError(error)) {
         throw error;

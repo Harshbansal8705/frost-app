@@ -1,6 +1,6 @@
-import { getServerSession, Session } from "next-auth";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { FrostError, FrostSession } from "@/types";
 
 /**
  * Retrieves the current authenticated user session.
@@ -9,12 +9,12 @@ import { redirect } from "next/navigation";
  * NOTE: API clients fetch/axios will follow this redirect and receive HTML. 
  * If you need a 401 JSON response, check session manually in the route.
  */
-export async function authenticateUser(): Promise<Session & { user: { id: string } }> {
+export async function authenticateUser(): Promise<FrostSession> {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    redirect("/auth/signin");
+    throw new FrostError("Unauthorized", 401);
   }
 
-  return session as Session & { user: { id: string } };
+  return session as FrostSession;
 }
