@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -59,9 +60,9 @@ export default async function DashboardPage() {
         </div>
         <div className="p-6 text-center text-slate-500 py-20">
           <p>No campaigns running currently.</p>
-          <button className="mt-4 px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors">
+          <Link href="/dashboard/campaigns/new" className="inline-block mt-8 px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors">
             Create Campaign
-          </button>
+          </Link>
         </div>
       </div>
     </div>
