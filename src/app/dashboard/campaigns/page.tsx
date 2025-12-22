@@ -1,24 +1,11 @@
 import Link from "next/link";
-import { Plus, Search, MoreHorizontal, Mail, Users } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Mail, Users, ArrowUpRight, Reply, Ban } from "lucide-react";
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { authenticateUser } from "@/lib/auth-helper";
 
 export default async function CampaignsPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.email) {
-    redirect("/auth/signin");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email }
-  });
-
-  if (!user) {
-    redirect("/auth/signin");
-  }
+  const session = await authenticateUser();
+  const user = session.user
 
   const campaigns = await prisma.campaign.findMany({
     where: { userId: user.id },
@@ -27,6 +14,16 @@ export default async function CampaignsPage() {
         select: {
           contacts: true,
           emailLogs: true
+        }
+      },
+      contacts: {
+        select: {
+          status: true
+        }
+      },
+      emailLogs: {
+        select: {
+          status: true
         }
       }
     },
@@ -68,7 +65,10 @@ export default async function CampaignsPage() {
             <tr>
               <th className="px-6 py-4">Name</th>
               <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Progress</th>
+              <th className="px-6 py-4">Contacts</th>
+              <th className="px-6 py-4">Sent</th>
+              <th className="px-6 py-4">Replied</th>
+              <th className="px-6 py-4">Bounced</th>
               <th className="px-6 py-4">Created</th>
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
@@ -76,7 +76,7 @@ export default async function CampaignsPage() {
           <tbody className="divide-y divide-white/5">
             {campaigns.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
                       <Mail size={24} className="opacity-50" />
@@ -86,38 +86,57 @@ export default async function CampaignsPage() {
                 </td>
               </tr>
             ) : (
-              campaigns.map((campaign) => (
-                <tr key={campaign.id} className="group hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-white">{campaign.title}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
-                      Draft
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4 text-slate-400">
-                      <div className="flex items-center gap-1.5" title="Contacts">
+              campaigns.map((campaign) => {
+                const sentCount = campaign.emailLogs.filter(l => l.status === 'SENT').length;
+                const repliedCount = campaign.contacts.filter(c => c.status === 'REPLIED' || c.status === 'RESPONDED_BACK').length;
+                const bouncedCount = campaign.contacts.filter(c => c.status === 'BOUNCED').length;
+
+                return (
+                  <tr key={campaign.id} className="group hover:bg-white/5 transition-colors relative">
+                    <td className="px-6 py-4">
+                      <Link href={`/dashboard/campaigns/${campaign.id}`} className="absolute inset-0 z-0" />
+                      <div className="font-semibold text-white relative z-10 pointer-events-none">{campaign.title}</div>
+                    </td>
+                    <td className="px-6 py-4 relative z-10">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                        Draft
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 relative z-10">
+                      <div className="flex items-center gap-1.5">
                         <Users size={14} />
                         <span>{campaign._count.contacts}</span>
                       </div>
-                      <div className="flex items-center gap-1.5" title="Emails Sent">
-                        <Mail size={14} />
-                        <span>{campaign._count.emailLogs}</span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 relative z-10">
+                      <div className="flex items-center gap-1.5 text-blue-400">
+                        <ArrowUpRight size={14} />
+                        <span>{sentCount}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-400">
-                    {new Date(campaign.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
-                      <MoreHorizontal size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 relative z-10">
+                      <div className="flex items-center gap-1.5 text-emerald-400">
+                        <Reply size={14} />
+                        <span>{repliedCount}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 relative z-10">
+                      <div className="flex items-center gap-1.5 text-red-400">
+                        <Ban size={14} />
+                        <span>{bouncedCount}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 relative z-10">
+                      {new Date(campaign.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-right relative z-10">
+                      <button className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
