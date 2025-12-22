@@ -1,10 +1,9 @@
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import Link from "next/link";
+import { authenticateUser } from "@/lib/auth-helper";
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+  const session = await authenticateUser();
   let totalSent = 0;
 
   if (session?.user?.email) {

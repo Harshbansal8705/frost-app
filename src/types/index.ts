@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { Session } from "next-auth";
 
 export interface FrostSession extends Session {
-  user: { id: string };
+  user: {
+    email: string;
+    id: string;
+    name: string | null;
+    emailVerified: Date | null;
+    image: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 }
 
 export class FrostError extends Error {

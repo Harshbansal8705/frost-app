@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (user) {
-          session.user.id = user.id
+          session.user = user;
         } else {
           // User deleted from DB, but valid token exists.
           // We should invalidate the session.

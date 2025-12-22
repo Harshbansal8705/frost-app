@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Trash2, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-import { Template } from "@/types";
+import { FrostError, Template } from "@/types";
 
 export function TemplateList() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -22,9 +21,9 @@ export function TemplateList() {
       if (!res.ok) throw new Error("Failed to fetch templates");
       const data = await res.json();
       setTemplates(data);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
+    } catch (error) {
+      if (error instanceof FrostError) {
+        setError(error.message);
       } else {
         setError("An unknown error occurred");
       }
@@ -42,9 +41,12 @@ export function TemplateList() {
       const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Template deleted");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete template");
+    } catch (error) {
+      if (error instanceof FrostError) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to delete template");
+      }
       fetchTemplates();
     }
   };

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Save, Loader2, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
-import { Template } from "@/types";
+import { FrostError, Template } from "@/types";
 
 interface TemplateFormProps {
   initialData?: {
@@ -42,9 +42,9 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
       const data = await res.json();
       setAttachments(prev => [...prev, data.url]);
       toast.success("File uploaded");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to upload file");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof FrostError ? error.message : "Some error occurred");
     } finally {
       setIsUploading(false);
       e.target.value = "";
@@ -77,8 +77,8 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
       const newTemplate = await res.json();
       toast.success("Template saved");
       onSuccess(newTemplate);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to save template";
+    } catch (dffof) {
+      const message = dffof instanceof Error ? dffof.message : "Failed to save template";
       toast.error(message);
       setError(message);
     } finally {

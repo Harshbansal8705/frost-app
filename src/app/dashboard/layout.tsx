@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopNav } from "@/components/dashboard/TopNav";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { authenticateUser } from "@/lib/auth-helper";
 
 export const metadata: Metadata = {
   title: "Dashboard | Frost",
@@ -15,8 +13,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return redirect("/auth/signin");
+  await authenticateUser();
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <div className="fixed inset-0 z-0 pointer-events-none">
