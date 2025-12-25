@@ -4,6 +4,23 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { FrostError } from "@/types";
 import { authenticateUser } from "@/lib/auth-helper";
+import { EmailLogStatus, Status } from "@/generated/prisma/enums";
+
+// Helper to calculate "Today or Tomorrow at [timeStr]" in UTC
+function getScheduleTime(timeStr: string = "09:00"): Date {
+  const now = new Date();
+  const [hours, minutes] = timeStr.split(':').map(Number);
+
+  const targetDate = new Date(now);
+  targetDate.setUTCHours(hours, minutes, 0, 0);
+
+  // If target time for today has already passed, move to tomorrow
+  if (targetDate <= now) {
+    targetDate.setDate(targetDate.getDate() + 1);
+  }
+
+  return targetDate;
+}
 
 export async function updateCampaign(campaignId: string, data: { title?: string }) {
   const session = await authenticateUser();
@@ -82,15 +99,40 @@ export async function addContactToCampaign(campaignId: string, contactData: { em
     companyId = company.id;
   }
 
-  await prisma.contact.create({
+  const newContact = await prisma.contact.create({
     data: {
       email: contactData.email,
       name: contactData.name || "",
       userId: user.id,
       campaignId: campaignId,
-      companyId: companyId
+      companyId: companyId,
+      status: Status.ACTIVE
     }
   });
+
+  // Get User Preferences
+  const { mailSendingTime } = await prisma.preferences.findUnique({
+    where: { userId: user.id },
+    select: { mailSendingTime: true }
+  }) || { mailSendingTime: "09:00" };
+
+  // Only schedule the first mail (Sequence 1)
+  const firstStep = await prisma.campaignTemplate.findFirst({
+    where: { campaignId, sequence: 1 }
+  });
+
+  if (firstStep) {
+    await prisma.emailLog.create({
+      data: {
+        campaignId,
+        templateId: firstStep.templateId,
+        contactId: newContact.id,
+        sequence: 1,
+        status: EmailLogStatus.SCHEDULED,
+        scheduledAt: getScheduleTime(mailSendingTime)
+      }
+    });
+  }
 
   revalidatePath(`/dashboard/campaigns/${campaignId}`);
 }
@@ -106,6 +148,13 @@ export async function removeContactFromCampaign(contactId: string) {
   if (!contact || contact.user.email !== session.user.email) {
     throw new FrostError("Contact not found or unauthorized");
   }
+
+  await prisma.emailLog.deleteMany({
+    where: {
+      contactId: contactId,
+      status: EmailLogStatus.SCHEDULED
+    }
+  });
 
   await prisma.contact.delete({
     where: { id: contactId }
@@ -141,6 +190,118 @@ export async function addTemplateToCampaign(campaignId: string, templateId: stri
     }
   });
 
+  // Get User Preferences
+  const { mailSendingTime } = await prisma.preferences.findUnique({
+    where: { userId: session.user.id },
+    select: { mailSendingTime: true }
+  }) || { mailSendingTime: "09:00" };
+
+  if (nextSeq === 1) {
+    const contacts = await prisma.contact.findMany({
+      where: { campaignId, status: Status.ACTIVE }
+    });
+
+    // Filter out contacts who already have a log for Sequence 1 (e.g. if Step 1 was deleted and re-added)
+    const existingLogs = await prisma.emailLog.findMany({
+      where: {
+        campaignId,
+        sequence: 1,
+        contactId: { in: contacts.map(c => c.id) }
+      },
+      select: { contactId: true }
+    });
+
+    const existingContactIds = new Set(existingLogs.map(l => l.contactId));
+    const eligibleContacts = contacts.filter(c => !existingContactIds.has(c.id));
+
+    if (eligibleContacts.length > 0) {
+      await prisma.emailLog.createMany({
+        data: eligibleContacts.map(contact => ({
+          campaignId,
+          templateId,
+          contactId: contact.id,
+          sequence: 1,
+          status: EmailLogStatus.SCHEDULED,
+          scheduledAt: getScheduleTime(mailSendingTime)
+        }))
+      });
+    }
+  } else {
+    // Case 2: Subsequent Step - Catch-up logic
+    // Optimized Query: Find contacts who finished previous step AND haven't started this step
+    const validContacts = await prisma.contact.findMany({
+      where: {
+        campaignId,
+        status: Status.ACTIVE,
+        AND: [
+          {
+            emailLogs: {
+              some: {
+                sequence: nextSeq - 1,
+                status: EmailLogStatus.SENT
+              }
+            }
+          },
+          {
+            emailLogs: {
+              none: {
+                sequence: nextSeq
+              }
+            }
+          }
+        ]
+      },
+      include: {
+        emailLogs: {
+          where: {
+            sequence: nextSeq - 1,
+            status: EmailLogStatus.SENT
+          },
+          select: { sentAt: true }
+        }
+      }
+    });
+
+    const validContactIds: string[] = [];
+    const scheduleMap: Record<string, Date> = {};
+
+    // Get delay for the new step
+    const createdStep = await prisma.campaignTemplate.findFirst({
+      where: { campaignId, sequence: nextSeq }
+    });
+    const delayMs = (createdStep?.delay || 1) * 24 * 60 * 60 * 1000;
+
+    for (const contact of validContacts) {
+      // The include filter guarantees we have the previous log here
+      const previousLog = contact.emailLogs[0];
+      if (!previousLog) continue;
+
+      validContactIds.push(contact.id);
+
+      let targetTime = new Date((previousLog.sentAt || new Date()).getTime() + delayMs);
+      if (targetTime.getTime() < Date.now()) {
+        targetTime = getScheduleTime(mailSendingTime);
+      }
+
+      scheduleMap[contact.id] = targetTime;
+    }
+
+    if (validContactIds.length > 0) {
+      await Promise.all(validContactIds.map(cid =>
+        prisma.emailLog.create({
+          data: {
+            campaignId,
+            templateId,
+            contactId: cid,
+            sequence: nextSeq,
+            status: EmailLogStatus.SCHEDULED,
+            scheduledAt: scheduleMap[cid]
+          }
+        })
+      ));
+    }
+  }
+
   revalidatePath(`/dashboard/campaigns/${campaignId}`);
 }
 
@@ -166,6 +327,15 @@ export async function removeCampaignTemplate(campaignTemplateId: string) {
     throw new FrostError("Can only remove the last step of the sequence");
   }
 
+  // Delete scheduled logs for this sequence
+  await prisma.emailLog.deleteMany({
+    where: {
+      campaignId: campaignTemplate.campaignId,
+      sequence: campaignTemplate.sequence,
+      status: EmailLogStatus.SCHEDULED
+    }
+  });
+
   await prisma.campaignTemplate.delete({
     where: { id: campaignTemplateId }
   });
@@ -189,6 +359,58 @@ export async function updateCampaignTemplateDelay(campaignTemplateId: string, de
     where: { id: campaignTemplateId },
     data: { delay }
   });
+
+  // Recalculate schedules for subsequent steps (Sequence > 1)
+  // Step 1 is always scheduled for "Tomorrow 9AM" regardless of delay, so we skip it.
+  if (campaignTemplate.sequence === 1) return;
+
+  const { mailSendingTime } = await prisma.preferences.findUnique({
+    where: { userId: session.user.id },
+    select: { mailSendingTime: true }
+  }) || { mailSendingTime: "09:00" };
+
+  const pendingLogs = await prisma.emailLog.findMany({
+    where: {
+      campaignId: campaignTemplate.campaignId,
+      sequence: campaignTemplate.sequence,
+      status: EmailLogStatus.SCHEDULED
+    },
+    include: {
+      contact: {
+        select: {
+          emailLogs: {
+            where: {
+              sequence: campaignTemplate.sequence - 1,
+              status: EmailLogStatus.SENT
+            },
+            select: { sentAt: true }
+          }
+        }
+      }
+    }
+  });
+
+  const updatePromises = pendingLogs.map(log => {
+    const prevLog = log.contact?.emailLogs[0];
+    if (!prevLog?.sentAt) return null;
+
+    const delayMs = delay * 24 * 60 * 60 * 1000;
+    let targetTime = new Date(prevLog.sentAt.getTime() + delayMs);
+
+    // Apply catch-up logic: if calculated time is in the past, move to Next Slot (Tomorrow 9AM)
+    if (targetTime.getTime() < Date.now()) {
+      targetTime = getScheduleTime(mailSendingTime);
+    }
+
+    return prisma.emailLog.update({
+      where: { id: log.id },
+      data: { scheduledAt: targetTime }
+    });
+  }).filter(Boolean);
+
+  if (updatePromises.length > 0) {
+    await Promise.all(updatePromises);
+  }
 
   revalidatePath(`/dashboard/campaigns/${campaignTemplate.campaignId}`);
 }

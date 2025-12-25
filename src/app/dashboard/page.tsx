@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { authenticateUser } from "@/lib/auth-helper";
+import { EmailLogStatus } from "@/generated/prisma/enums";
 
 export default async function DashboardPage() {
   const session = await authenticateUser();
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
           campaign: {
             userId: user.id
           },
-          status: 'SENT'
+          status: EmailLogStatus.SENT
         }
       });
     }
