@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, FileText } from "lucide-react";
+import { Pencil, Trash2, FileText } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Template, FrostError } from "@/types";
@@ -57,7 +58,16 @@ export function TemplateCard({ template }: TemplateCardProps) {
         ? 'bg-red-500/5 border-red-500/30 backdrop-blur-sm scale-[0.98] animate-pulse pointer-events-none' // Glass deletion state
         : 'hover:border-cyan-500/30' // Normal state hover effect
       }`}>
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+        <Link href={`/dashboard/templates/${template.id}`}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10"
+          >
+            <Pencil size={16} />
+          </Button>
+        </Link>
         <Button
           onClick={deleteTemplate}
           disabled={isDeleting}
@@ -74,12 +84,11 @@ export function TemplateCard({ template }: TemplateCardProps) {
           <div className="w-8 h-8 rounded bg-cyan-500/10 flex items-center justify-center text-cyan-400">
             <FileText size={16} />
           </div>
-          <span className="text-xs text-slate-500 font-mono">
-            {new Date(template.createdAt).toLocaleDateString()}
+          <span className="text-base font-semibold text-white truncate">
+            {template.name}
           </span>
         </div>
-        <h3 className="text-lg font-medium text-white mb-1 truncate pr-8">{template.name}</h3>
-        <p className="text-sm text-slate-400 truncate">{template.subject}</p>
+        <h3 className="text-sm text-slate-400 mb-1 truncate pr-8">{template.subject}</h3>
       </div>
 
       <div className="text-sm text-slate-500 line-clamp-3 font-mono bg-black/20 p-3 rounded border border-white/5">

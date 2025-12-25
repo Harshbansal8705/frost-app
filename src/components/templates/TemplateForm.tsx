@@ -14,11 +14,12 @@ interface TemplateFormProps {
     body: string;
     attachments: string[];
   };
+  templateId?: string;
   onSuccess: (template: Template) => void;
   onCancel?: () => void;
 }
 
-export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormProps) {
+export function TemplateForm({ initialData, templateId, onSuccess, onCancel }: TemplateFormProps) {
   const [formData, setFormData] = useState(initialData || { name: "", subject: "", body: "" });
   const [attachments, setAttachments] = useState<string[]>(initialData?.attachments || []);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,17 +68,20 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
     setError(null);
 
     try {
-      const res = await fetch("/api/templates", {
-        method: "POST",
+      const url = templateId ? `/api/templates/${templateId}` : "/api/templates";
+      const method = templateId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, attachments }),
       });
 
-      if (!res.ok) throw new Error("Failed to create template");
+      if (!res.ok) throw new Error("Failed to save template");
 
-      const newTemplate = await res.json();
+      const savedTemplate = await res.json();
       toast.success("Template saved");
-      onSuccess(newTemplate);
+      onSuccess(savedTemplate);
     } catch (dffof) {
       const message = dffof instanceof Error ? dffof.message : "Failed to save template";
       toast.error(message);

@@ -143,3 +143,52 @@ export async function addTemplateToCampaign(campaignId: string, templateId: stri
 
   revalidatePath(`/dashboard/campaigns/${campaignId}`);
 }
+
+export async function removeCampaignTemplate(campaignTemplateId: string) {
+  const session = await authenticateUser();
+
+  const campaignTemplate = await prisma.campaignTemplate.findUnique({
+    where: { id: campaignTemplateId },
+    include: { campaign: { include: { user: true } } }
+  });
+
+  if (!campaignTemplate || campaignTemplate.campaign.user.email !== session.user.email) {
+    throw new FrostError("Template step not found or unauthorized");
+  }
+
+  // Ensure this is the last step in the sequence
+  const params = await prisma.campaignTemplate.findFirst({
+    where: { campaignId: campaignTemplate.campaignId },
+    orderBy: { sequence: 'desc' }
+  });
+
+  if (params && params.id !== campaignTemplateId) {
+    throw new FrostError("Can only remove the last step of the sequence");
+  }
+
+  await prisma.campaignTemplate.delete({
+    where: { id: campaignTemplateId }
+  });
+
+  revalidatePath(`/dashboard/campaigns/${campaignTemplate.campaignId}`);
+}
+
+export async function updateCampaignTemplateDelay(campaignTemplateId: string, delay: number) {
+  const session = await authenticateUser();
+
+  const campaignTemplate = await prisma.campaignTemplate.findUnique({
+    where: { id: campaignTemplateId },
+    include: { campaign: { include: { user: true } } }
+  });
+
+  if (!campaignTemplate || campaignTemplate.campaign.user.email !== session.user.email) {
+    throw new FrostError("Template step not found or unauthorized");
+  }
+
+  await prisma.campaignTemplate.update({
+    where: { id: campaignTemplateId },
+    data: { delay }
+  });
+
+  revalidatePath(`/dashboard/campaigns/${campaignTemplate.campaignId}`);
+}
