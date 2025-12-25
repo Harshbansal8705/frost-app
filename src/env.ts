@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   DATABASE_URL: z.url(),
+  DIRECT_URL: z.url().optional(),
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   NEXTAUTH_SECRET: z.string().min(1),
@@ -12,7 +13,10 @@ const envSchema = z.object({
   SMTP_USER: z.string().min(1),
   SMTP_PASS: z.string().min(1),
   SMTP_FROM: z.email(),
-});
+}).transform((data) => ({
+  ...data,
+  DIRECT_URL: data.DIRECT_URL || data.DATABASE_URL,
+}));
 
 const _env = envSchema.safeParse(process.env);
 
