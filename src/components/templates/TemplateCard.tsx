@@ -20,8 +20,6 @@ export function TemplateCard({ template }: TemplateCardProps) {
     if (!confirm("Are you sure you want to delete this template?")) return;
 
     setIsDeleting(true);
-    // Optimistic UI: Hide immediately
-    setIsDeleted(true);
 
     try {
       const res = await fetch(`/api/templates/${template.id}`, { method: "DELETE" });
@@ -29,6 +27,12 @@ export function TemplateCard({ template }: TemplateCardProps) {
         const data = await res.json();
         throw new FrostError(data.error || "Failed to delete", res.status);
       }
+
+      // Animate out on success
+      setIsDeleted(true);
+      // Wait for animation to finish
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       toast.success("Template deleted");
       router.refresh();
     } catch (error) {
@@ -46,10 +50,13 @@ export function TemplateCard({ template }: TemplateCardProps) {
     }
   };
 
-  if (isDeleted) return null;
-
   return (
-    <div className={`group bg-slate-900/50 border border-white/10 hover:border-cyan-500/30 rounded-xl p-6 transition-all relative ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
+    <div className={`group bg-slate-900/50 border border-white/10 rounded-xl p-4 md:p-6 transition-all duration-500 relative ${isDeleted
+      ? 'opacity-0 scale-90 pointer-events-none' // Animate out
+      : isDeleting
+        ? 'bg-red-500/5 border-red-500/30 backdrop-blur-sm scale-[0.98] animate-pulse pointer-events-none' // Glass deletion state
+        : 'hover:border-cyan-500/30' // Normal state hover effect
+      }`}>
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
           onClick={deleteTemplate}
