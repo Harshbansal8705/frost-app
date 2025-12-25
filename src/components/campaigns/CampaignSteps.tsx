@@ -72,7 +72,7 @@ export function CampaignSteps({
       <div className="flex flex-col gap-3">
         {optimisticSteps.length === 0 ? (
           <div className="p-6 rounded-xl border border-white/10 bg-slate-900/50 text-center text-slate-500">
-            <LayoutTemplate size={24} className="mx-auto mb-2 opacity-50" />
+            <LayoutTemplate size={20} className="mx-auto mb-2 opacity-50" />
             <p>No templates in sequence.</p>
           </div>
         ) : (

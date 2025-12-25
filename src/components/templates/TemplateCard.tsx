@@ -72,7 +72,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
           </span>
         </div>
         <h3 className="text-lg font-medium text-white mb-1 truncate pr-8">{template.name}</h3>
-        <p className="text-sm text-slate-400 truncate">Subject: {template.subject}</p>
+        <p className="text-sm text-slate-400 truncate">{template.subject}</p>
       </div>
 
       <div className="text-sm text-slate-500 line-clamp-3 font-mono bg-black/20 p-3 rounded border border-white/5">

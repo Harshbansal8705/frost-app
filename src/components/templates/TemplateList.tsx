@@ -12,15 +12,15 @@ export function TemplateList({ templates }: TemplateListProps) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Email Templates</h1>
-          <p className="text-slate-400">Manage your reusable email templates.</p>
+          <h1 className="text-xl font-bold text-white mb-1">Email Templates</h1>
+          <p className="text-slate-400 text-sm">Manage your reusable email templates.</p>
         </div>
         <Link
           href="/dashboard/templates/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors"
         >
           <Plus size={18} />
-          Create Template
+          New Template
         </Link>
       </div>
 
@@ -37,7 +37,7 @@ export function TemplateList({ templates }: TemplateListProps) {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map(template => (
             <TemplateCard key={template.id} template={template} />
           ))}

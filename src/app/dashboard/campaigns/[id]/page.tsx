@@ -88,7 +88,7 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
 
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Contacts" value={campaign.contacts.length} icon={Users} color="bg-blue-600/20" />
         <StatCard title="Emails Sent" value={sentCount} icon={Send} color="bg-indigo-600/20" />
         <StatCard title="Replied" value={repliedCount} icon={Reply} color="bg-emerald-600/20" />
@@ -103,7 +103,7 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
             <ContactsActions campaignId={campaign.id} />
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm overflow-hidden min-h-[400px]">
+          <div className="rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm overflow-x-auto min-h-[400px]">
             <table className="w-full text-left text-sm">
               <thead className="bg-white/5 border-b border-white/10 text-slate-400 font-medium">
                 <tr>

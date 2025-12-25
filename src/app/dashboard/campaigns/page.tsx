@@ -60,7 +60,7 @@ export default async function CampaignsPage() {
       </div>
 
       {/* Campaigns List */}
-      <div className="rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+      <div className="rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-white/5 border-b border-white/10 text-slate-400 font-medium">
             <tr>

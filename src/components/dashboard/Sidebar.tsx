@@ -24,7 +24,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 bg-slate-950/50 backdrop-blur-xl">
+    <aside className="hidden md:block fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 bg-slate-950/50 backdrop-blur-xl">
       <div className="flex h-16 items-center gap-2 border-b border-white/10 px-6">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-500/20">
           <Zap size={18} className="text-white" fill="currentColor" />
