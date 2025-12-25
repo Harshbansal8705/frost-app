@@ -7,6 +7,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { Bold, Italic, Link as LinkIcon, Unlink, List, ListOrdered } from 'lucide-react'
 import clsx from 'clsx'
 import './editor.css'
+import { Button } from "@/components/ui/Button"
 
 interface RichTextEditorProps {
   content: string;
@@ -70,75 +71,87 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
 
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b border-white/5 bg-white/5">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => editor.chain().focus().toggleBold().run()}
           disabled={!editor.can().chain().focus().toggleBold().run()}
           className={clsx(
-            "p-1.5 rounded transition-colors",
-            editor.isActive('bold') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-white/10'
+            "p-1.5 rounded transition-colors h-8 w-8 hover:bg-white/10",
+            editor.isActive('bold') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white'
           )}
           title="Bold"
         >
           <Bold size={16} />
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           disabled={!editor.can().chain().focus().toggleItalic().run()}
           className={clsx(
-            "p-1.5 rounded transition-colors",
-            editor.isActive('italic') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-white/10'
+            "p-1.5 rounded transition-colors h-8 w-8 hover:bg-white/10",
+            editor.isActive('italic') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white'
           )}
           title="Italic"
         >
           <Italic size={16} />
-        </button>
+        </Button>
 
         <div className="w-px h-4 bg-white/10 mx-1" />
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={setLink}
           className={clsx(
-            "p-1.5 rounded transition-colors",
-            editor.isActive('link') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-white/10'
+            "p-1.5 rounded transition-colors h-8 w-8 hover:bg-white/10",
+            editor.isActive('link') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white'
           )}
           title="Link"
         >
           <LinkIcon size={16} />
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => editor.chain().focus().unsetLink().run()}
           disabled={!editor.isActive('link')}
-          className="p-1.5 rounded transition-colors text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-50"
+          className="p-1.5 rounded transition-colors text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-50 h-8 w-8"
           title="Unlink"
         >
           <Unlink size={16} />
-        </button>
+        </Button>
 
         <div className="w-px h-4 bg-white/10 mx-1" />
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className={clsx(
-            "p-1.5 rounded transition-colors",
-            editor.isActive('bulletList') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-white/10'
+            "p-1.5 rounded transition-colors h-8 w-8 hover:bg-white/10",
+            editor.isActive('bulletList') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white'
           )}
           title="Bullet List"
         >
           <List size={16} />
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           className={clsx(
-            "p-1.5 rounded transition-colors",
-            editor.isActive('orderedList') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white hover:bg-white/10'
+            "p-1.5 rounded transition-colors h-8 w-8 hover:bg-white/10",
+            editor.isActive('orderedList') ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-white'
           )}
           title="Ordered List"
         >
           <ListOrdered size={16} />
-        </button>
+        </Button>
 
       </div>
 

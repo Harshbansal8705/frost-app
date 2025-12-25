@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, Search, MoreHorizontal, Mail, Users, ArrowUpRight, Reply, Ban } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { authenticateUser } from "@/lib/auth-helper";
+import { Button } from "@/components/ui/Button";
 
 export default async function CampaignsPage() {
   const session = await authenticateUser();
@@ -130,9 +131,9 @@ export default async function CampaignsPage() {
                       {new Date(campaign.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right relative z-10">
-                      <button className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
+                      <Button variant="ghost" size="icon" className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors h-auto w-auto">
                         <MoreHorizontal size={16} />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 );

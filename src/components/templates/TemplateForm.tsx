@@ -5,6 +5,7 @@ import { Save, Loader2, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { FrostError, Template } from "@/types";
+import { Button } from "@/components/ui/Button";
 
 interface TemplateFormProps {
   initialData?: {
@@ -136,9 +137,10 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
               disabled={isUploading}
             />
-            <button
+            <Button
               type="button"
-              className="flex items-center gap-2 text-xs text-cyan-400 hover:text-cyan-300 transition-colors pointer-events-none"
+              variant="ghost"
+              className="gap-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-transparent p-0 h-auto pointer-events-none"
             >
               {isUploading ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -146,7 +148,7 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
                 <Paperclip size={14} />
               )}
               {isUploading ? "Uploading..." : "Add File"}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -161,13 +163,15 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
                   <span className="text-xs text-slate-300 max-w-[150px] truncate" title={fileName}>
                     {fileName}
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => removeAttachment(index)}
-                    className="text-slate-500 hover:text-red-400 transition-colors"
+                    className="text-slate-500 hover:text-red-400 hover:bg-transparent h-5 w-5"
                   >
                     <X size={12} />
-                  </button>
+                  </Button>
                 </div>
               );
             })}
@@ -177,31 +181,23 @@ export function TemplateForm({ initialData, onSuccess, onCancel }: TemplateFormP
 
       <div className="flex justify-end gap-3 pt-4">
         {onCancel && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={onCancel}
-            className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+            className="px-4 py-2 text-slate-400 hover:text-white"
           >
             Cancel
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="submit"
-          disabled={isSubmitting}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg shadow-lg shadow-cyan-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          isLoading={isSubmitting}
+          className="gap-2 px-6 py-2.5 shadow-lg shadow-cyan-500/20 h-auto"
         >
-          {isSubmitting ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save size={18} />
-              Save Template
-            </>
-          )}
-        </button>
+          {!isSubmitting && <Save size={18} />}
+          {isSubmitting ? "Saving..." : "Save Template"}
+        </Button>
       </div>
     </form>
   );

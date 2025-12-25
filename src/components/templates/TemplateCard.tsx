@@ -5,6 +5,7 @@ import { Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Template, FrostError } from "@/types";
+import { Button } from "@/components/ui/Button";
 
 interface TemplateCardProps {
   template: Template;
@@ -50,13 +51,15 @@ export function TemplateCard({ template }: TemplateCardProps) {
   return (
     <div className={`group bg-slate-900/50 border border-white/10 hover:border-cyan-500/30 rounded-xl p-6 transition-all relative ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
+        <Button
           onClick={deleteTemplate}
           disabled={isDeleting}
-          className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
         >
           <Trash2 size={16} />
-        </button>
+        </Button>
       </div>
 
       <div className="mb-4">

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowRight, Check, FileText, Users, Rocket, Plus, Trash2, Loader2, Paperclip, X } from "lucide-react";
+import { ArrowRight, Check, FileText, Users, Rocket, Plus, Trash2, Paperclip, X } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TemplateForm } from "@/components/templates/TemplateForm";
+import { Button } from "@/components/ui/Button";
 
 const steps = [
   { id: 1, name: "Setup", icon: FileText },
@@ -265,13 +266,13 @@ export function NewCampaignWizard() {
                   placeholder="Acme Inc."
                 />
               </div>
-              <button
+              <Button
                 onClick={addLead}
                 disabled={!newLead.email}
-                className="h-9 px-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="h-9 px-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Add
-              </button>
+              </Button>
             </div>
 
             {/* List */}
@@ -293,9 +294,9 @@ export function NewCampaignWizard() {
                         <td className="px-4 py-2.5">{lead.email}</td>
                         <td className="px-4 py-2.5">{lead.company}</td>
                         <td className="px-4 py-2.5 text-right">
-                          <button onClick={() => removeLead(i)} className="text-slate-500 hover:text-red-400">
+                          <Button variant="ghost" size="icon" onClick={() => removeLead(i)} className="text-slate-500 hover:text-red-400 hover:bg-transparent h-auto w-auto p-1">
                             <Trash2 size={14} />
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -321,12 +322,14 @@ export function NewCampaignWizard() {
                 return (
                   <div key={step.id || idx} className="bg-black/20 border border-white/10 rounded-lg p-6 relative group">
                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => removeStep(idx)}
-                        className="text-slate-500 hover:text-red-400"
+                        className="text-slate-500 hover:text-red-400 hover:bg-transparent h-auto w-auto p-1"
                       >
                         <Trash2 size={16} />
-                      </button>
+                      </Button>
                     </div>
 
                     <div className="flex items-center justify-between mb-4">
@@ -409,12 +412,14 @@ export function NewCampaignWizard() {
                     <span className="text-xs font-medium text-cyan-400 bg-cyan-950/30 px-2 py-1 rounded uppercase tracking-wide">
                       {formData.sequence.length === 0 ? "First Mail" : `Follow Up ${formData.sequence.length}`}
                     </span>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setIsAddingStep(false)}
-                      className="text-slate-500 hover:text-white"
+                      className="text-slate-500 hover:text-white hover:bg-transparent h-auto w-auto p-0"
                     >
                       <X size={16} />
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="mb-4">
@@ -444,13 +449,14 @@ export function NewCampaignWizard() {
               )}
 
               {!isAddingStep && (
-                <button
+                <Button
                   onClick={addStep}
-                  className="w-full py-4 border-2 border-dashed border-white/10 rounded-lg text-slate-500 hover:border-cyan-500/30 hover:text-cyan-400 transition-all flex items-center justify-center gap-2"
+                  variant="ghost"
+                  className="w-full py-4 border-2 border-dashed border-white/10 rounded-lg text-slate-500 hover:border-cyan-500/30 hover:text-cyan-400 transition-all gap-2 h-auto"
                 >
                   <Plus size={18} />
                   {formData.sequence.length === 0 ? "Add First Mail" : "Add Follow-up"}
-                </button>
+                </Button>
               )}
             </div>
 
@@ -461,9 +467,9 @@ export function NewCampaignWizard() {
                 <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                   <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-slate-900 z-10">
                     <h3 className="text-lg font-bold text-white">Create New Template</h3>
-                    <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-500 hover:text-white">
+                    <Button variant="ghost" size="icon" onClick={() => setIsTemplateModalOpen(false)} className="text-slate-500 hover:text-white hover:bg-transparent h-auto w-auto p-1">
                       <X size={20} />
-                    </button>
+                    </Button>
                   </div>
                   <div className="p-6">
                     <TemplateForm
@@ -516,33 +522,25 @@ export function NewCampaignWizard() {
           >
             Cancel
           </Link>
-          <button
+          <Button
+            variant="ghost"
             onClick={prevStep}
-            className="px-6 py-2.5 text-slate-300 hover:text-white transition-colors"
+            className="px-6 py-2.5 text-slate-300 hover:text-white transition-colors h-auto"
             hidden={currentStep === 1}
           >
             Back
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={currentStep === 4 ? handleSubmit : nextStep}
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg shadow-lg shadow-cyan-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            isLoading={isSubmitting}
+            className="gap-2 px-6 py-2.5 shadow-lg shadow-cyan-500/20 h-auto"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Launching...
-              </>
-            ) : (
-              <>
-                {currentStep === 4
-                  ? "Launch Campaign"
-                  : (currentStep === 2 && formData.leads.length === 0 ? "Skip for now" : "Continue")
-                }
-                {currentStep !== 4 && <ArrowRight size={18} />}
-              </>
-            )}
-          </button>
+            {currentStep === 4
+              ? "Launch Campaign"
+              : (currentStep === 2 && formData.leads.length === 0 ? "Skip for now" : "Continue")
+            }
+            {currentStep !== 4 && <ArrowRight size={18} />}
+          </Button>
         </div>
       </div>
     </div>

@@ -68,12 +68,14 @@ export const EditCampaignTitle = ({ campaignId, initialTitle }: { campaignId: st
   return (
     <div className="flex items-center gap-3 group">
       <h1 className="text-3xl font-bold text-white tracking-tight">{initialTitle}</h1>
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={() => setIsEditing(true)}
-        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-cyan-400"
+        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-cyan-400 h-8 w-8 hover:bg-transparent"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 1 22l1.5-6.5L17 3z"></path></svg>
-      </button>
+      </Button>
     </div>
   );
 };
@@ -242,16 +244,17 @@ export const AddTemplateDropdown = ({
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-white/10 rounded-xl shadow-xl overflow-hidden z-20">
           <div className="p-2 border-b border-white/10">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 setIsOpen(false);
                 setIsCreateModalOpen(true);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-cyan-400 hover:text-cyan-300 hover:bg-white/5 rounded-lg transition-colors"
+              className="w-full justify-start gap-2 px-3 py-2 text-sm text-cyan-400 hover:text-cyan-300 hover:bg-white/5 rounded-lg h-auto"
             >
               <FilePlus size={16} />
               Create new template
-            </button>
+            </Button>
           </div>
           <div className="max-h-60 overflow-y-auto p-1">
             {allTemplates.length === 0 ? (
@@ -278,12 +281,14 @@ export const AddTemplateDropdown = ({
           <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">New Template</h2>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white hover:bg-transparent h-auto w-auto p-1"
               >
                 <Trash2 size={24} className="rotate-45" />
-              </button>
+              </Button>
             </div>
 
             <TemplateForm
