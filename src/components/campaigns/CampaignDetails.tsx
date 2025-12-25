@@ -6,6 +6,7 @@ import { addContactToCampaign, removeContactFromCampaign, addTemplateToCampaign,
 import { FrostError, Template } from "@/types";
 import { toast } from "sonner";
 import { TemplateForm } from "@/components/templates/TemplateForm";
+import { Button } from "@/components/ui/Button";
 
 export const EditCampaignTitle = ({ campaignId, initialTitle }: { campaignId: string, initialTitle: string }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -42,23 +43,24 @@ export const EditCampaignTitle = ({ campaignId, initialTitle }: { campaignId: st
           className="bg-transparent text-3xl font-bold text-white tracking-tight border-b border-cyan-500 focus:outline-none"
           autoFocus
         />
-        <button
+        <Button
           type="submit"
-          disabled={isSubmitting}
-          className="bg-cyan-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+          isLoading={isSubmitting}
+          className="px-3 py-1 text-sm"
         >
           Save
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setIsEditing(false);
             setTitle(initialTitle);
           }}
-          className="text-slate-400 hover:text-white text-sm"
+          className="text-slate-400 hover:text-white text-sm h-8"
         >
           Cancel
-        </button>
+        </Button>
       </form>
     );
   }
@@ -107,13 +109,13 @@ export const ContactsActions = ({ campaignId }: { campaignId: string }) => {
 
   return (
     <div className="relative">
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors"
+        className="gap-2 px-3 py-1.5 text-xs font-semibold h-auto"
       >
         <Plus size={14} />
         Add Contact
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 border border-white/10 rounded-xl shadow-xl p-4 z-50">
@@ -143,20 +145,21 @@ export const ContactsActions = ({ campaignId }: { campaignId: string }) => {
               className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
             />
             <div className="flex gap-2 mt-2">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => setIsOpen(false)}
-                className="flex-1 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                className="flex-1 px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white h-auto"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-3 py-1.5 text-xs font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors disabled:opacity-50"
+                isLoading={isSubmitting}
+                className="flex-1 px-3 py-1.5 text-xs font-semibold h-auto"
               >
-                {isSubmitting ? 'Adding...' : 'Add'}
-              </button>
+                Add
+              </Button>
             </div>
           </form>
         </div>
@@ -182,17 +185,27 @@ export const RemoveContactButton = ({ contactId }: { contactId: string }) => {
   };
 
   return (
-    <button
+    <Button
       onClick={handleDelete}
-      disabled={isDeleting}
-      className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50"
+      variant="destructive"
+      size="icon"
+      isLoading={isDeleting}
+      className="h-8 w-8 hover:bg-red-400/10 text-slate-500 hover:text-red-400"
     >
-      <Trash2 size={16} />
-    </button>
+      {!isDeleting && <Trash2 size={16} />}
+    </Button>
   );
 }
 
-export const AddTemplateDropdown = ({ campaignId, allTemplates }: { campaignId: string, allTemplates: Template[] }) => {
+export const AddTemplateDropdown = ({
+  campaignId,
+  allTemplates,
+  onAdd
+}: {
+  campaignId: string,
+  allTemplates: Template[],
+  onAdd?: (templateId: string) => Promise<void>
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -200,9 +213,13 @@ export const AddTemplateDropdown = ({ campaignId, allTemplates }: { campaignId: 
   const handleSelect = async (templateId: string) => {
     setIsSubmitting(true);
     try {
-      await addTemplateToCampaign(campaignId, templateId);
+      if (onAdd) {
+        await onAdd(templateId);
+      } else {
+        await addTemplateToCampaign(campaignId, templateId);
+        toast.success("Step added");
+      }
       setIsOpen(false);
-      toast.success("Step added");
     } catch (error) {
       console.error(error);
       toast.error(error instanceof FrostError ? error.message : "Failed to add template");
@@ -213,13 +230,14 @@ export const AddTemplateDropdown = ({ campaignId, allTemplates }: { campaignId: 
 
   return (
     <div className="relative">
-      <button
+      <Button
+        variant="secondary"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors"
+        className="gap-2 px-3 py-1.5 text-xs font-semibold h-auto"
       >
         <Plus size={14} />
         Add Step
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-white/10 rounded-xl shadow-xl overflow-hidden z-20">
@@ -240,14 +258,15 @@ export const AddTemplateDropdown = ({ campaignId, allTemplates }: { campaignId: 
               <div className="p-3 text-center text-xs text-slate-500">No existing templates</div>
             ) : (
               allTemplates.map(t => (
-                <button
+                <Button
                   key={t.id}
+                  variant="ghost"
                   onClick={() => handleSelect(t.id)}
-                  disabled={isSubmitting}
-                  className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors truncate"
+                  isLoading={isSubmitting}
+                  className="w-full justify-start px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/10 rounded-lg h-auto"
                 >
-                  {t.name}
-                </button>
+                  <span className="truncate">{t.name}</span>
+                </Button>
               ))
             )}
           </div>

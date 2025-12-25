@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, LayoutTemplate, Users, Send, Reply, Ban, Clock } from "lucide-react";
+import { ArrowLeft, Users, Send, Reply, Ban } from "lucide-react";
 import prisma from "@/lib/prisma";
-import { ContactsActions, RemoveContactButton, AddTemplateDropdown, EditCampaignTitle } from "@/components/campaigns/CampaignDetails";
+import { ContactsActions, RemoveContactButton, EditCampaignTitle } from "@/components/campaigns/CampaignDetails";
+import { CampaignSteps } from "@/components/campaigns/CampaignSteps";
 import StatusBadge from "@/components/campaigns/StatusBadge";
 import StatCard from "@/components/campaigns/StatCard";
 import { authenticateUser } from "@/lib/auth-helper";
@@ -12,7 +13,7 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
 
   const { id } = await params;
 
-  const campaign = await prisma.campaign.findUnique({
+  const campaign = await prisma.campaign.findFirst({
     where: { id, userId: session.user.id },
     include: {
       templates: {
@@ -56,6 +57,15 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
     ...t,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString()
+  }));
+
+  const initialSteps = campaign.templates.map(ct => ({
+    ...ct,
+    template: {
+      ...ct.template,
+      createdAt: ct.template.createdAt.toISOString(),
+      updatedAt: ct.template.updatedAt.toISOString()
+    }
   }));
 
 
@@ -144,35 +154,11 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
 
         {/* Right Column: Templates (1/3 width) */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Sequence</h2>
-            <AddTemplateDropdown campaignId={campaign.id} allTemplates={allTemplates} />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {campaign.templates.length === 0 ? (
-              <div className="p-6 rounded-xl border border-white/10 bg-slate-900/50 text-center text-slate-500">
-                <LayoutTemplate size={24} className="mx-auto mb-2 opacity-50" />
-                <p>No templates in sequence.</p>
-              </div>
-            ) : (
-              campaign.templates.map((ct, index) => (
-                <div key={ct.id} className="p-4 rounded-xl border border-white/10 bg-slate-900/50 flex flex-col gap-2 group hover:border-white/20 transition-all">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      {index === 0 ? "First Mail" : `Follow Up ${index}`}
-                    </span>
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Clock size={12} />
-                      Wait {ct.delay} day{ct.delay !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <div className="font-medium text-white">{ct.template.name}</div>
-                  <div className="text-sm text-slate-400 truncate">{ct.template.subject}</div>
-                </div>
-              ))
-            )}
-          </div>
+          <CampaignSteps
+            campaignId={campaign.id}
+            initialSteps={initialSteps}
+            allTemplates={allTemplates}
+          />
         </div>
       </div>
     </div>

@@ -41,7 +41,7 @@ const HelperText = ({ children }: { children: React.ReactNode }) => (
   <p className="text-xs text-slate-500 mt-1">{children}</p>
 );
 
-import { SettingsData } from "@/types";
+import { FrostError, SettingsData } from "@/types";
 
 export function SettingsForm({ initialData }: { initialData: SettingsData }) {
   const [activeTab, setActiveTab] = useState<"profile" | "email">("profile");
@@ -86,7 +86,7 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
       toast.success("Profile updated successfully");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update profile");
+      toast.error(error instanceof FrostError ? error.message : "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
       toast.success("Email settings saved successfully");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to save email settings");
+      toast.error(error instanceof FrostError ? error.message : "Failed to save email settings");
     } finally {
       setLoading(false);
     }

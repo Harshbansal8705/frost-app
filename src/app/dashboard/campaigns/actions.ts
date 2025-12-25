@@ -72,10 +72,15 @@ export async function addContactToCampaign(campaignId: string, contactData: { em
   });
 
   if (!company) {
-    throw new FrostError("Company not found");
+    companyId = await prisma.company.create({
+      data: {
+        name: contactData.companyName,
+        userId: user.id
+      }
+    }).then((company) => company.id);
+  } else {
+    companyId = company.id;
   }
-
-  companyId = company.id;
 
   await prisma.contact.create({
     data: {

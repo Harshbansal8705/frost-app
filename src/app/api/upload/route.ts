@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { safeAPI } from "@/lib/utils";
+import { safeAPI } from "@/lib/api";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { FrostError } from "@/types";

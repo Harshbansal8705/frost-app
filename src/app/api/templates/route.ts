@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { safeAPI } from "@/lib/utils";
+import { safeAPI } from "@/lib/api";
 import prisma from "@/lib/prisma";
 import { authenticateUser } from "@/lib/auth-helper";
 import { FrostError } from "@/types";
