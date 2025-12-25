@@ -4,14 +4,33 @@ import { useState } from "react";
 import { Plus, Trash2, FilePlus } from "lucide-react";
 import { addContactToCampaign, removeContactFromCampaign, addTemplateToCampaign, updateCampaign } from "@/app/dashboard/campaigns/actions";
 import { FrostError, Template } from "@/types";
+import { CampaignStatus } from "@/generated/prisma/enums";
 import { toast } from "sonner";
 import { TemplateForm } from "@/components/templates/TemplateForm";
 import { Button } from "@/components/ui/Button";
 
-export const EditCampaignTitle = ({ campaignId, initialTitle }: { campaignId: string, initialTitle: string }) => {
+import StatusBadge from "@/components/campaigns/StatusBadge";
+
+export const EditCampaignTitle = ({ campaignId, initialTitle, initialStatus = CampaignStatus.DRAFT }: { campaignId: string, initialTitle: string, initialStatus?: CampaignStatus }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(initialTitle);
+  const [status, setStatus] = useState<CampaignStatus>(initialStatus);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleStatusChange = async (newStatus: CampaignStatus) => {
+    // Optimistic update
+    const previousStatus = status;
+    setStatus(newStatus);
+
+    try {
+      await updateCampaign(campaignId, { status: newStatus });
+      toast.success(`Campaign marked as ${newStatus.toLowerCase()}`);
+    } catch (error) {
+      setStatus(previousStatus);
+      console.error(error);
+      toast.error("Failed to update status");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,16 +85,41 @@ export const EditCampaignTitle = ({ campaignId, initialTitle }: { campaignId: st
   }
 
   return (
-    <div className="flex items-center gap-3 group">
-      <h1 className="text-3xl font-bold text-white tracking-tight">{initialTitle}</h1>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setIsEditing(true)}
-        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-cyan-400 h-8 w-8 hover:bg-transparent"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 1 22l1.5-6.5L17 3z"></path></svg>
-      </Button>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        {/* Status Dropdown */}
+        <div className="relative group/status">
+          <button className="focus:outline-none transition-transform active:scale-95">
+            <StatusBadge status={status} />
+          </button>
+
+          <div className="absolute top-full left-0 mt-2 w-32 bg-slate-900 border border-white/10 rounded-lg shadow-xl overflow-hidden invisible group-hover/status:visible opacity-0 group-hover/status:opacity-100 transition-all z-50">
+            <div className="flex flex-col p-1">
+              {Object.values(CampaignStatus).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleStatusChange(s)}
+                  className={`text-left px-3 py-2 text-xs font-medium rounded hover:bg-white/10 ${s === status ? 'text-cyan-400' : 'text-slate-400'}`}
+                >
+                  {s.charAt(0) + s.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 group">
+        <h1 className="text-3xl font-bold text-white tracking-tight">{initialTitle}</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsEditing(true)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-cyan-400 h-8 w-8 hover:bg-transparent"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 1 22l1.5-6.5L17 3z"></path></svg>
+        </Button>
+      </div>
     </div>
   );
 };

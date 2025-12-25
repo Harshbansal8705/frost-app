@@ -80,7 +80,7 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <EditCampaignTitle campaignId={campaign.id} initialTitle={campaign.title} />
+            <EditCampaignTitle campaignId={campaign.id} initialTitle={campaign.title} initialStatus={campaign.status} />
             <p className="text-slate-400 mt-1">Created on {new Date(campaign.createdAt).toLocaleDateString()}</p>
           </div>
         </div>

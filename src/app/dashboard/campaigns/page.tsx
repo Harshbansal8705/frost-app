@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Plus, Search, MoreHorizontal, Mail, Users, ArrowUpRight, Reply, Ban } from "lucide-react";
+import { Plus, Search, Mail, Users, ArrowUpRight, Reply, Ban } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { authenticateUser } from "@/lib/auth-helper";
-import { Button } from "@/components/ui/Button";
+import StatusBadge from "@/components/campaigns/StatusBadge";
 
 export default async function CampaignsPage() {
   const session = await authenticateUser();
@@ -71,7 +71,6 @@ export default async function CampaignsPage() {
               <th className="px-6 py-4">Replied</th>
               <th className="px-6 py-4">Bounced</th>
               <th className="px-6 py-4">Created</th>
-              <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -99,9 +98,7 @@ export default async function CampaignsPage() {
                       <div className="font-semibold text-white relative z-10 pointer-events-none">{campaign.title}</div>
                     </td>
                     <td className="px-6 py-4 relative z-10">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
-                        Draft
-                      </span>
+                      <StatusBadge status={campaign.status} />
                     </td>
                     <td className="px-6 py-4 text-slate-400 relative z-10">
                       <div className="flex items-center gap-1.5">
@@ -129,11 +126,6 @@ export default async function CampaignsPage() {
                     </td>
                     <td className="px-6 py-4 text-slate-400 relative z-10">
                       {new Date(campaign.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right relative z-10">
-                      <Button variant="ghost" size="icon" className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors h-auto w-auto">
-                        <MoreHorizontal size={16} />
-                      </Button>
                     </td>
                   </tr>
                 );

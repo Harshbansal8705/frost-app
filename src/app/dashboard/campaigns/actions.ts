@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { FrostError } from "@/types";
 import { authenticateUser } from "@/lib/auth-helper";
-import { EmailLogStatus, Status } from "@/generated/prisma/enums";
+import { EmailLogStatus, Status, CampaignStatus } from "@/generated/prisma/enums";
 
 // Helper to calculate "Today or Tomorrow at [timeStr]" in UTC
 function getScheduleTime(timeStr: string = "09:00"): Date {
@@ -22,7 +22,7 @@ function getScheduleTime(timeStr: string = "09:00"): Date {
   return targetDate;
 }
 
-export async function updateCampaign(campaignId: string, data: { title?: string }) {
+export async function updateCampaign(campaignId: string, data: { title?: string; status?: CampaignStatus }) {
   const session = await authenticateUser();
 
   const campaign = await prisma.campaign.findUnique({

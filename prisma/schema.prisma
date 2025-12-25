@@ -23,6 +23,13 @@ enum EmailLogStatus {
   FAILED
 }
 
+enum CampaignStatus {
+  ACTIVE
+  DRAFT
+  PAUSED
+  COMPLETED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -80,6 +87,7 @@ model VerificationToken {
 model Campaign {
   id        String             @id @default(cuid())
   title     String
+  status    CampaignStatus     @default(DRAFT)
   userId    String
   contacts  Contact[]
   templates CampaignTemplate[]
@@ -167,6 +175,7 @@ model EmailLog {
   status       EmailLogStatus @default(SCHEDULED)
   scheduledAt  DateTime?
   sentAt       DateTime?
+  messageId    String?
   errorMessage String?
   retryCount   Int            @default(0)
   createdAt    DateTime       @default(now())
