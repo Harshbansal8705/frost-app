@@ -157,7 +157,7 @@ model Preferences {
   id                         String   @id @default(cuid())
   userId                     String   @unique
   stopAllCompanyMailsOnReply Boolean  @default(true)
-  timezone                   String   @default("UTC")
+  timezone                   String   @default("Asia/Kolkata")
   mailSendingTime            String   @default("09:00")
   sendOnWeekends             Boolean  @default(false)
   createdAt                  DateTime @default(now())

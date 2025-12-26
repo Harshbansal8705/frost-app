@@ -46,6 +46,12 @@ export interface SettingsData {
     imapPort: number;
     imapUser: string;
   } | null;
+  preferences?: {
+    stopAllCompanyMailsOnReply: boolean;
+    timezone: string;
+    mailSendingTime: string;
+    sendOnWeekends: boolean;
+  } | null;
 }
 
 export type APIHandler<T = unknown, P = unknown> = (
