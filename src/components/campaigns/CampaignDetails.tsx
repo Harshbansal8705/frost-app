@@ -95,7 +95,7 @@ export const EditCampaignTitle = ({ campaignId, initialTitle, initialStatus = Ca
 
           <div className="absolute top-full left-0 mt-2 w-32 bg-slate-900 border border-white/10 rounded-lg shadow-xl overflow-hidden invisible group-hover/status:visible opacity-0 group-hover/status:opacity-100 transition-all z-50">
             <div className="flex flex-col p-1">
-              {Object.values(CampaignStatus).map((s) => (
+              {[CampaignStatus.ACTIVE, CampaignStatus.DRAFT].map((s) => (
                 <button
                   key={s}
                   onClick={() => handleStatusChange(s)}

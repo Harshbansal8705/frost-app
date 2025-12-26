@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { FrostError } from "@/types";
 import { authenticateUser } from "@/lib/auth-helper";
 import { EmailLogStatus, Status, CampaignStatus } from "@/generated/prisma/enums";
+import { EmailLogCreateManyInput } from "@/generated/prisma/models";
 
 // Helper to calculate "Today or Tomorrow at [timeStr]" in UTC
 function getScheduleTime(timeStr: string = "09:00"): Date {
@@ -34,9 +35,104 @@ export async function updateCampaign(campaignId: string, data: { title?: string;
     throw new FrostError("Campaign not found");
   }
 
-  await prisma.campaign.update({
-    where: { id: campaignId },
-    data
+  await prisma.$transaction(async (tx) => {
+    await tx.campaign.update({
+      where: { id: campaignId },
+      data
+    });
+
+    // Handle Status Transitions
+    if (data.status === CampaignStatus.DRAFT) {
+      // 1. DRAFT: Stop everything (Delete SCHEDULED logs)
+      await tx.emailLog.deleteMany({
+        where: {
+          campaignId,
+          status: EmailLogStatus.SCHEDULED
+        }
+      });
+
+    } else if (data.status === CampaignStatus.ACTIVE) {
+      // 2. ACTIVE: Reschedule / Resume
+      const { mailSendingTime } = await tx.preferences.findUnique({
+        where: { userId: session.user.id },
+        select: { mailSendingTime: true }
+      }) || { mailSendingTime: "09:00" };
+
+      // Get all Active contacts
+      const contacts = await tx.contact.findMany({
+        where: { campaignId, status: Status.ACTIVE },
+        include: {
+          emailLogs: {
+            orderBy: { sequence: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      // Get all Steps to know delays
+      const steps = await tx.campaignTemplate.findMany({
+        where: { campaignId },
+        orderBy: { sequence: 'asc' }
+      });
+
+      const stepsMap = new Map(steps.map(s => [s.sequence, s]));
+
+      if (steps.length > 0) {
+        const logsToCreate: EmailLogCreateManyInput[] = [];
+
+        for (const contact of contacts) {
+          // Determine next sequence
+          const lastLog = contact.emailLogs[0];
+
+          let nextSeq = 1;
+
+          if (lastLog) {
+            if (lastLog.status === EmailLogStatus.SENT) {
+              nextSeq = lastLog.sequence + 1;
+            } else {
+              continue;
+            }
+          }
+
+          const nextStep = stepsMap.get(nextSeq);
+          if (!nextStep) continue; // No more steps
+
+          // Calculate Time
+          // If Sequence 1, schedule for next slot (Tomorrow)
+          // If Sequence > 1, schedule based on Previous Sent + Delay
+          let targetTime: Date;
+
+          if (nextSeq === 1) {
+            targetTime = getScheduleTime(mailSendingTime);
+          } else {
+            if (lastLog && lastLog.sequence === nextSeq - 1 && lastLog.sentAt) {
+              const delayMs = (nextStep.delay || 1) * 24 * 60 * 60 * 1000;
+              targetTime = new Date(lastLog.sentAt.getTime() + delayMs);
+
+              // Catch up
+              if (targetTime.getTime() < Date.now()) {
+                targetTime = getScheduleTime(mailSendingTime);
+              }
+            } else {
+              targetTime = getScheduleTime(mailSendingTime);
+            }
+          }
+
+          logsToCreate.push({
+            campaignId,
+            templateId: nextStep.templateId,
+            contactId: contact.id,
+            sequence: nextSeq,
+            status: EmailLogStatus.SCHEDULED,
+            scheduledAt: targetTime
+          });
+        }
+
+        if (logsToCreate.length > 0) {
+          await tx.emailLog.createMany({ data: logsToCreate });
+        }
+      }
+    }
   });
 
   revalidatePath(`/dashboard/campaigns/${campaignId}`);
@@ -121,7 +217,7 @@ export async function addContactToCampaign(campaignId: string, contactData: { em
     where: { campaignId, sequence: 1 }
   });
 
-  if (firstStep) {
+  if (firstStep && campaign.status === CampaignStatus.ACTIVE) {
     await prisma.emailLog.create({
       data: {
         campaignId,

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft, Users, Send, Reply, Ban } from "lucide-react";
 import prisma from "@/lib/prisma";
-import { ContactsActions, RemoveContactButton, EditCampaignTitle } from "@/components/campaigns/CampaignDetails";
+import { ContactsActions, EditCampaignTitle } from "@/components/campaigns/CampaignDetails";
+import { CampaignContactsTable } from "@/components/campaigns/CampaignContactsTable";
 import { CampaignSteps } from "@/components/campaigns/CampaignSteps";
-import StatusBadge from "@/components/campaigns/StatusBadge";
 import StatCard from "@/components/campaigns/StatCard";
 import { authenticateUser } from "@/lib/auth-helper";
 
@@ -26,14 +26,18 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
         include: {
           company: true,
           emailLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 1
+            orderBy: { sequence: 'desc' },
           }
         }
       },
       emailLogs: true
     }
   });
+
+  campaign?.contacts.forEach(c => {
+    console.log(c.email);
+    console.log(c.emailLogs);
+  })
 
   if (!campaign) {
     return (
@@ -104,51 +108,7 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
           </div>
 
           <div className="rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm overflow-x-auto min-h-[400px]">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-white/5 border-b border-white/10 text-slate-400 font-medium">
-                <tr>
-                  <th className="px-6 py-3">Contact</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Last Sent</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {campaign.contacts.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
-                      <p>No contacts yet. Add some to get started.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  campaign.contacts.map(contact => (
-                    <tr key={contact.id} className="group hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-white">{contact.name}</div>
-                        <div className="text-slate-500 text-xs">{contact.email}</div>
-                        <div className="text-slate-500 text-xs">{contact.company.name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={contact.status} />
-                      </td>
-                      <td className="px-6 py-4 text-slate-400">
-                        {contact.emailLogs[0]?.sentAt ? (
-                          <div className="flex flex-col">
-                            <span>{new Date(contact.emailLogs[0].sentAt).toLocaleDateString()}</span>
-                            <span className="text-xs text-slate-600">{new Date(contact.emailLogs[0].sentAt).toLocaleTimeString()}</span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-700">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <RemoveContactButton contactId={contact.id} />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <CampaignContactsTable contacts={campaign.contacts} />
           </div>
         </div>
 
