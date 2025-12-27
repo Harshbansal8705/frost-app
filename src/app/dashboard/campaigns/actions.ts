@@ -8,7 +8,27 @@ import { EmailLogStatus, Status, CampaignStatus } from "@/generated/prisma/enums
 import { EmailLogCreateManyInput } from "@/generated/prisma/models";
 
 // Helper to calculate "Today or Tomorrow at [timeStr]" in UTC
-function getScheduleTime(timeStr: string = "09:00"): Date {
+// Helper to handle weekend skipping
+function adjustForWeekend(date: Date, allowWeekends: boolean): Date {
+  if (allowWeekends) return date;
+
+  const d = new Date(date);
+  const day = d.getDay();
+
+  // 0 = Sunday, 6 = Saturday
+  if (day === 0) {
+    // Sunday -> Monday (+1 day)
+    d.setDate(d.getDate() + 1);
+  } else if (day === 6) {
+    // Saturday -> Monday (+2 days)
+    d.setDate(d.getDate() + 2);
+  }
+
+  return d;
+}
+
+// Helper to calculate "Today or Tomorrow at [timeStr]" in UTC
+function getScheduleTime(timeStr: string = "09:00", allowWeekends: boolean = false): Date {
   const now = new Date();
   const [hours, minutes] = timeStr.split(':').map(Number);
 
@@ -20,7 +40,8 @@ function getScheduleTime(timeStr: string = "09:00"): Date {
     targetDate.setDate(targetDate.getDate() + 1);
   }
 
-  return targetDate;
+  // Check for weekends
+  return adjustForWeekend(targetDate, allowWeekends);
 }
 
 export async function updateCampaign(campaignId: string, data: { title?: string; status?: CampaignStatus }) {
@@ -53,10 +74,10 @@ export async function updateCampaign(campaignId: string, data: { title?: string;
 
     } else if (data.status === CampaignStatus.ACTIVE) {
       // 2. ACTIVE: Reschedule / Resume
-      const { mailSendingTime } = await tx.preferences.findUnique({
+      const { mailSendingTime, sendOnWeekends } = await tx.preferences.findUnique({
         where: { userId: session.user.id },
-        select: { mailSendingTime: true }
-      }) || { mailSendingTime: "09:00" };
+        select: { mailSendingTime: true, sendOnWeekends: true }
+      }) || { mailSendingTime: "09:00", sendOnWeekends: false };
 
       // Get all Active contacts
       const contacts = await tx.contact.findMany({
@@ -98,23 +119,24 @@ export async function updateCampaign(campaignId: string, data: { title?: string;
           if (!nextStep) continue; // No more steps
 
           // Calculate Time
-          // If Sequence 1, schedule for next slot (Tomorrow)
-          // If Sequence > 1, schedule based on Previous Sent + Delay
           let targetTime: Date;
 
           if (nextSeq === 1) {
-            targetTime = getScheduleTime(mailSendingTime);
+            targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
           } else {
             if (lastLog && lastLog.sequence === nextSeq - 1 && lastLog.sentAt) {
               const delayMs = (nextStep.delay || 1) * 24 * 60 * 60 * 1000;
               targetTime = new Date(lastLog.sentAt.getTime() + delayMs);
 
+              // Apply weekend check logic specifically here
+              targetTime = adjustForWeekend(targetTime, sendOnWeekends);
+
               // Catch up
               if (targetTime.getTime() < Date.now()) {
-                targetTime = getScheduleTime(mailSendingTime);
+                targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
               }
             } else {
-              targetTime = getScheduleTime(mailSendingTime);
+              targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
             }
           }
 
@@ -207,10 +229,10 @@ export async function addContactToCampaign(campaignId: string, contactData: { em
   });
 
   // Get User Preferences
-  const { mailSendingTime } = await prisma.preferences.findUnique({
+  const { mailSendingTime, sendOnWeekends } = await prisma.preferences.findUnique({
     where: { userId: user.id },
-    select: { mailSendingTime: true }
-  }) || { mailSendingTime: "09:00" };
+    select: { mailSendingTime: true, sendOnWeekends: true }
+  }) || { mailSendingTime: "09:00", sendOnWeekends: false };
 
   // Only schedule the first mail (Sequence 1)
   const firstStep = await prisma.campaignTemplate.findFirst({
@@ -225,7 +247,7 @@ export async function addContactToCampaign(campaignId: string, contactData: { em
         contactId: newContact.id,
         sequence: 1,
         status: EmailLogStatus.SCHEDULED,
-        scheduledAt: getScheduleTime(mailSendingTime)
+        scheduledAt: getScheduleTime(mailSendingTime, sendOnWeekends)
       }
     });
   }
@@ -287,10 +309,10 @@ export async function addTemplateToCampaign(campaignId: string, templateId: stri
   });
 
   // Get User Preferences
-  const { mailSendingTime } = await prisma.preferences.findUnique({
+  const { mailSendingTime, sendOnWeekends } = await prisma.preferences.findUnique({
     where: { userId: session.user.id },
-    select: { mailSendingTime: true }
-  }) || { mailSendingTime: "09:00" };
+    select: { mailSendingTime: true, sendOnWeekends: true }
+  }) || { mailSendingTime: "09:00", sendOnWeekends: false };
 
   if (nextSeq === 1) {
     const contacts = await prisma.contact.findMany({
@@ -318,7 +340,7 @@ export async function addTemplateToCampaign(campaignId: string, templateId: stri
           contactId: contact.id,
           sequence: 1,
           status: EmailLogStatus.SCHEDULED,
-          scheduledAt: getScheduleTime(mailSendingTime)
+          scheduledAt: getScheduleTime(mailSendingTime, sendOnWeekends)
         }))
       });
     }
@@ -375,8 +397,12 @@ export async function addTemplateToCampaign(campaignId: string, templateId: stri
       validContactIds.push(contact.id);
 
       let targetTime = new Date((previousLog.sentAt || new Date()).getTime() + delayMs);
+
+      // Apply weekend check logic
+      targetTime = adjustForWeekend(targetTime, sendOnWeekends);
+
       if (targetTime.getTime() < Date.now()) {
-        targetTime = getScheduleTime(mailSendingTime);
+        targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
       }
 
       scheduleMap[contact.id] = targetTime;
@@ -460,10 +486,10 @@ export async function updateCampaignTemplateDelay(campaignTemplateId: string, de
   // Step 1 is always scheduled for "Tomorrow 9AM" regardless of delay, so we skip it.
   if (campaignTemplate.sequence === 1) return;
 
-  const { mailSendingTime } = await prisma.preferences.findUnique({
+  const { mailSendingTime, sendOnWeekends } = await prisma.preferences.findUnique({
     where: { userId: session.user.id },
-    select: { mailSendingTime: true }
-  }) || { mailSendingTime: "09:00" };
+    select: { mailSendingTime: true, sendOnWeekends: true }
+  }) || { mailSendingTime: "09:00", sendOnWeekends: false };
 
   const pendingLogs = await prisma.emailLog.findMany({
     where: {
@@ -493,9 +519,12 @@ export async function updateCampaignTemplateDelay(campaignTemplateId: string, de
     const delayMs = delay * 24 * 60 * 60 * 1000;
     let targetTime = new Date(prevLog.sentAt.getTime() + delayMs);
 
+    // Apply weekend logic
+    targetTime = adjustForWeekend(targetTime, sendOnWeekends);
+
     // Apply catch-up logic: if calculated time is in the past, move to Next Slot (Tomorrow 9AM)
     if (targetTime.getTime() < Date.now()) {
-      targetTime = getScheduleTime(mailSendingTime);
+      targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
     }
 
     return prisma.emailLog.update({
@@ -579,25 +608,28 @@ export async function updateContactStatus(contactId: string, status: Status) {
 
         if (nextStep) {
           // Calculate Timing
-          const { mailSendingTime } = await prisma.preferences.findUnique({
+          const { mailSendingTime, sendOnWeekends } = await prisma.preferences.findUnique({
             where: { userId: session.user.id },
-            select: { mailSendingTime: true }
-          }) || { mailSendingTime: "09:00" };
+            select: { mailSendingTime: true, sendOnWeekends: true }
+          }) || { mailSendingTime: "09:00", sendOnWeekends: false };
 
           let targetTime: Date;
 
           if (nextSeq === 1) {
             // Step 1: Always "Tomorrow or Today" based on pref
-            targetTime = getScheduleTime(mailSendingTime);
+            targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
           } else {
             // Subsequent Steps: Based on Last Sent + Delay
             const delayMs = (nextStep.delay || 1) * 24 * 60 * 60 * 1000;
             const baseTime = lastSentLog?.sentAt ? lastSentLog.sentAt : new Date();
             targetTime = new Date(baseTime.getTime() + delayMs);
 
+            // Apply weekend logic
+            targetTime = adjustForWeekend(targetTime, sendOnWeekends);
+
             // Catch up: If calculated time is in past, schedule for next available slot
             if (targetTime.getTime() < Date.now()) {
-              targetTime = getScheduleTime(mailSendingTime);
+              targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
             }
           }
 
