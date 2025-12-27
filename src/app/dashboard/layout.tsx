@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopNav } from "@/components/dashboard/TopNav";
 import { BottomNav } from "@/components/dashboard/BottomNav";
 import { authenticateUser } from "@/lib/auth-helper";
+import CredentialsWarning from "@/components/dashboard/CredentialsWarning";
 
 export const metadata: Metadata = {
   title: "Dashboard | Frost",
@@ -26,6 +27,7 @@ export default async function DashboardLayout({
       <BottomNav />
       <div className="md:pl-64 flex flex-col min-h-screen relative z-10 pb-20 md:pb-0">
         <TopNav />
+        <CredentialsWarning />
         <main className="flex-1 p-4 md:p-8">
           {children}
         </main>

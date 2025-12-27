@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
-import StatusBadge from "@/components/campaigns/StatusBadge";
+import ContactStatusCell from "@/components/campaigns/ContactStatusCell";
 import { RemoveContactButton } from "@/components/campaigns/CampaignDetails";
 import { Contact, Company, EmailLog } from "@/generated/prisma/client";
 
@@ -109,7 +109,7 @@ export const CampaignContactsTable = ({ contacts }: { contacts: ContactWithDetai
                     {contact.company.name}
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge status={contact.status} />
+                    <ContactStatusCell id={contact.id} status={contact.status} />
                   </td>
                   <td className="px-6 py-4 text-slate-400">
                     {lastSentLog ? (

@@ -5,7 +5,9 @@ import { updateProfile, updateEmailSettings, updatePreferences } from "@/app/das
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Info } from "lucide-react";
+import { Info, ChevronRight } from "lucide-react";
+import { FrostError, SettingsData } from "@/types";
+import { Button } from "@/components/ui/Button";
 
 // Simple UI components to avoid dependency on missing UI library
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -54,17 +56,14 @@ const Tooltip = ({ content }: { content: string }) => (
   </div>
 );
 
-
 const HelperText = ({ children }: { children: React.ReactNode }) => (
   <p className="text-xs text-slate-500 mt-1">{children}</p>
 );
 
-import { FrostError, SettingsData } from "@/types";
-import { Button } from "@/components/ui/Button";
-
 export function SettingsForm({ initialData }: { initialData: SettingsData }) {
   const [activeTab, setActiveTab] = useState<"profile" | "email" | "preferences">("profile");
   const [loading, setLoading] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const session = useSession();
   const router = useRouter();
 
@@ -247,29 +246,6 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-1">
-                  <Label htmlFor="smtpHost">Host</Label>
-                  <Input
-                    id="smtpHost"
-                    placeholder="smtp.example.com"
-                    value={emailSettings.smtpHost}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtpHost: e.target.value })}
-                    required
-                  />
-                  <HelperText>Server host (e.g. smtp.gmail.com for Gmail)</HelperText>
-                </div>
-                <div className="md:col-span-1">
-                  <Label htmlFor="smtpPort">Port</Label>
-                  <Input
-                    id="smtpPort"
-                    type="number"
-                    placeholder="587"
-                    value={emailSettings.smtpPort}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtpPort: e.target.value })}
-                    required
-                  />
-                  <HelperText>Server port (usually 587)</HelperText>
-                </div>
-                <div className="md:col-span-1">
                   <Label htmlFor="smtpUser">Username</Label>
                   <Input
                     id="smtpUser"
@@ -278,7 +254,10 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
                     onChange={(e) => setEmailSettings({ ...emailSettings, smtpUser: e.target.value })}
                     required
                   />
-                  <HelperText>Your email address (e.g. user@gmail.com)</HelperText>
+                  <HelperText>
+                    Your email address (e.g. user@gmail.com). <br />
+                    <span className="text-amber-500/80">Note: For Gmail SMTP, this must be the same as your email address.</span>
+                  </HelperText>
                 </div>
                 <div className="md:col-span-1">
                   <Label htmlFor="smtpPassword">Password</Label>
@@ -300,35 +279,12 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
             </div>
 
             {/* IMAP Settings */}
-            <div className="space-y-4">
+            <div className="space-y-4 border-b border-slate-800 pb-8">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-blue-400 uppercase tracking-wider">IMAP Settings (Receiving)</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-1">
-                  <Label htmlFor="imapHost">Host</Label>
-                  <Input
-                    id="imapHost"
-                    placeholder="imap.example.com"
-                    value={emailSettings.imapHost}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, imapHost: e.target.value })}
-                    required
-                  />
-                  <HelperText>Server host (e.g. imap.gmail.com for Gmail)</HelperText>
-                </div>
-                <div className="md:col-span-1">
-                  <Label htmlFor="imapPort">Port</Label>
-                  <Input
-                    id="imapPort"
-                    type="number"
-                    placeholder="993"
-                    value={emailSettings.imapPort}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, imapPort: e.target.value })}
-                    required
-                  />
-                  <HelperText>Server port (usually 993)</HelperText>
-                </div>
                 <div className="md:col-span-1">
                   <Label htmlFor="imapUser">Username</Label>
                   <Input
@@ -354,11 +310,68 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-800">
-              <Button type="submit" isLoading={loading} className="w-full md:w-auto">
-                Save Configuration
-              </Button>
+            {/* Advanced Settings Checkbox */}
+            <div className="border border-slate-800 rounded-lg p-4 bg-slate-900/30">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white transition-colors w-full"
+              >
+                <ChevronRight className={`w-4 h-4 text-blue-500 transition-transform duration-200 ${showAdvanced ? "rotate-90" : ""}`} />
+                Show Advanced Server Settings
+              </button>
+
+              {showAdvanced && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="md:col-span-1">
+                    <Label htmlFor="smtpHost">SMTP Host</Label>
+                    <Input
+                      id="smtpHost"
+                      placeholder="smtp.example.com"
+                      value={emailSettings.smtpHost}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, smtpHost: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label htmlFor="smtpPort">SMTP Port</Label>
+                    <Input
+                      id="smtpPort"
+                      type="number"
+                      placeholder="587"
+                      value={emailSettings.smtpPort}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, smtpPort: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label htmlFor="imapHost">IMAP Host</Label>
+                    <Input
+                      id="imapHost"
+                      placeholder="imap.example.com"
+                      value={emailSettings.imapHost}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, imapHost: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label htmlFor="imapPort">IMAP Port</Label>
+                    <Input
+                      id="imapPort"
+                      type="number"
+                      placeholder="993"
+                      value={emailSettings.imapPort}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, imapPort: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
             </div>
+
+            <Button type="submit" isLoading={loading} className="w-full">
+              Save
+            </Button>
           </form>
         </Card>
       )}

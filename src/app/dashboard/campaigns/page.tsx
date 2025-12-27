@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus, Search, Mail, Users, ArrowUpRight, Reply, Ban } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { authenticateUser } from "@/lib/auth-helper";
-import StatusBadge from "@/components/campaigns/StatusBadge";
+import CampaignStatusCell from "@/components/campaigns/CampaignStatusCell";
 
 export default async function CampaignsPage() {
   const session = await authenticateUser();
@@ -98,7 +98,7 @@ export default async function CampaignsPage() {
                       <div className="font-semibold text-white relative z-10 pointer-events-none">{campaign.title}</div>
                     </td>
                     <td className="px-6 py-4 relative z-10">
-                      <StatusBadge status={campaign.status} />
+                      <CampaignStatusCell id={campaign.id} status={campaign.status} />
                     </td>
                     <td className="px-6 py-4 text-slate-400 relative z-10">
                       <div className="flex items-center gap-1.5">

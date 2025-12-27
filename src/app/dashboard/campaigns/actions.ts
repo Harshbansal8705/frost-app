@@ -510,3 +510,111 @@ export async function updateCampaignTemplateDelay(campaignTemplateId: string, de
 
   revalidatePath(`/dashboard/campaigns/${campaignTemplate.campaignId}`);
 }
+
+export async function updateContactStatus(contactId: string, status: Status) {
+  const session = await authenticateUser();
+
+  const contact = await prisma.contact.findUnique({
+    where: { id: contactId },
+    include: { user: true }
+  });
+
+  if (!contact || contact.user.email !== session.user.email) {
+    throw new FrostError("Contact not found or unauthorized");
+  }
+
+  await prisma.contact.update({
+    where: { id: contactId },
+    data: { status }
+  });
+
+  // If status is changed to anything other than ACTIVE, and potentially REPLIED/BOUNCED logic needs to run?
+  // For manual updates, we mainly care about stopping emails.
+  if (status !== Status.ACTIVE) {
+    await prisma.emailLog.deleteMany({
+      where: {
+        contactId,
+        status: EmailLogStatus.SCHEDULED
+      }
+    });
+  } else if (status === Status.ACTIVE && contact.status !== Status.ACTIVE) {
+    // Reactivating: Check if we need to reschedule
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: contact.campaignId }
+    });
+
+    if (campaign?.status === CampaignStatus.ACTIVE) {
+      // 1. Check if there are ALREADY scheduled logs (e.g. maybe they weren't deleted on pause, or race condition)
+      // If we have scheduled logs, we assume the flow is active and don't double-schedule.
+      const existingScheduled = await prisma.emailLog.findFirst({
+        where: {
+          contactId,
+          status: EmailLogStatus.SCHEDULED
+        }
+      });
+
+      if (!existingScheduled) {
+        // 2. No scheduled logs. We need to "Resume".
+        // Find where they left off.
+        const lastSentLog = await prisma.emailLog.findFirst({
+          where: {
+            contactId,
+            status: EmailLogStatus.SENT
+          },
+          orderBy: { sequence: 'desc' }
+        });
+
+        let nextSeq = 1;
+        if (lastSentLog) {
+          nextSeq = lastSentLog.sequence + 1;
+        }
+
+        // Get the template step for this sequence
+        const nextStep = await prisma.campaignTemplate.findFirst({
+          where: {
+            campaignId: contact.campaignId,
+            sequence: nextSeq
+          }
+        });
+
+        if (nextStep) {
+          // Calculate Timing
+          const { mailSendingTime } = await prisma.preferences.findUnique({
+            where: { userId: session.user.id },
+            select: { mailSendingTime: true }
+          }) || { mailSendingTime: "09:00" };
+
+          let targetTime: Date;
+
+          if (nextSeq === 1) {
+            // Step 1: Always "Tomorrow or Today" based on pref
+            targetTime = getScheduleTime(mailSendingTime);
+          } else {
+            // Subsequent Steps: Based on Last Sent + Delay
+            const delayMs = (nextStep.delay || 1) * 24 * 60 * 60 * 1000;
+            const baseTime = lastSentLog?.sentAt ? lastSentLog.sentAt : new Date();
+            targetTime = new Date(baseTime.getTime() + delayMs);
+
+            // Catch up: If calculated time is in past, schedule for next available slot
+            if (targetTime.getTime() < Date.now()) {
+              targetTime = getScheduleTime(mailSendingTime);
+            }
+          }
+
+          await prisma.emailLog.create({
+            data: {
+              campaignId: contact.campaignId,
+              templateId: nextStep.templateId,
+              contactId: contact.id,
+              sequence: nextSeq,
+              status: EmailLogStatus.SCHEDULED,
+              scheduledAt: targetTime
+            }
+          });
+        }
+      }
+    }
+  }
+
+  revalidatePath(`/dashboard/campaigns/${contact.campaignId}`);
+}

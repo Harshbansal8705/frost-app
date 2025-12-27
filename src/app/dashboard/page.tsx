@@ -1,28 +1,28 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { authenticateUser } from "@/lib/auth-helper";
-import { EmailLogStatus } from "@/generated/prisma/enums";
+import { EmailLogStatus, CampaignStatus, Status } from "@/generated/prisma/enums";
+import StatCard from "@/components/campaigns/StatCard";
+import { Mail, Play, Reply, Ban } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await authenticateUser();
-  let totalSent = 0;
+  const userId = session.user.id;
 
-  if (session?.user?.email) {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-
-    if (user) {
-      totalSent = await prisma.emailLog.count({
-        where: {
-          campaign: {
-            userId: user.id
-          },
-          status: EmailLogStatus.SENT
-        }
-      });
-    }
-  }
+  const [activeCampaigns, totalSent, repliedCount, bouncedCount] = await Promise.all([
+    prisma.campaign.count({
+      where: { userId, status: CampaignStatus.ACTIVE }
+    }),
+    prisma.emailLog.count({
+      where: { campaign: { userId }, status: EmailLogStatus.SENT }
+    }),
+    prisma.contact.count({
+      where: { userId, status: { in: [Status.REPLIED, Status.RESPONDED_BACK] } }
+    }),
+    prisma.contact.count({
+      where: { userId, status: Status.BOUNCED }
+    })
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -33,24 +33,30 @@ export default async function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total Sent", value: totalSent.toLocaleString(), change: "+0%", trend: "up" }, // Real number
-          { label: "Open Rate", value: "0%", change: "0%", trend: "neutral" },         // Dummy/Fallback
-          { label: "Reply Rate", value: "0%", change: "0%", trend: "neutral" },        // Dummy/Fallback
-          { label: "Opportunities", value: "0", change: "0", trend: "neutral" },      // Dummy/Fallback
-        ].map((stat, i) => (
-          <div key={i} className="p-6 rounded-xl border border-white/5 bg-white/5 hover:border-cyan-500/30 transition-all cursor-default">
-            <p className="text-sm font-medium text-slate-400">{stat.label}</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white">{stat.value}</span>
-              {stat.change !== "0%" && stat.change !== "0" && (
-                <span className={`text-xs font-medium ${stat.trend === 'up' ? 'text-green-400' : stat.trend === 'down' ? 'text-red-400' : 'text-slate-500'}`}>
-                  {stat.change}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+        <StatCard
+          title="Active Campaigns"
+          value={activeCampaigns}
+          icon={Play}
+          color="bg-purple-500/10 text-purple-400 border-purple-500/20"
+        />
+        <StatCard
+          title="Total Sent"
+          value={totalSent}
+          icon={Mail}
+          color="bg-blue-500/10 text-blue-400 border-blue-500/20"
+        />
+        <StatCard
+          title="Total Replies"
+          value={repliedCount}
+          icon={Reply}
+          color="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+        />
+        <StatCard
+          title="Total Bounced"
+          value={bouncedCount}
+          icon={Ban}
+          color="bg-red-500/10 text-red-400 border-red-500/20"
+        />
       </div>
 
       {/* Recent Activity Mockup */}
@@ -59,7 +65,7 @@ export default async function DashboardPage() {
           <h3 className="font-semibold text-white">Recent Activity</h3>
         </div>
         <div className="p-6 text-center text-slate-500 py-20">
-          <p>No campaigns running currently.</p>
+          <p>Start a new campaign to see activity here.</p>
           <Link href="/dashboard/campaigns/new" className="inline-block mt-8 px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors">
             Create Campaign
           </Link>

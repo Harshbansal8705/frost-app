@@ -1,11 +1,13 @@
 "use server";
 
+import nodemailer from 'nodemailer';
+import imaps from 'imap-simple';
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { FrostError } from "@/types";
 import { authenticateUser } from "@/lib/auth-helper";
 import { getOffsetMs, adjustTime } from "@/lib/utils";
-import { z, ZodError } from "zod";
+import { z } from "zod";
 
 export interface EmailSettingsPayload {
   fromName?: string;
@@ -78,10 +80,77 @@ export async function updateProfile(data: ProfilePayload) {
 export async function updateEmailSettings(data: EmailSettingsPayload) {
   const session = await authenticateUser();
 
-  // Check if settings exist to know if we are creating or updating
+  // If password is not provided for update, fetch from DB to use for verification
+  let smtpPassword = data.smtpPassword;
+  let imapPassword = data.imapPassword;
+
+  // We need the existing settings to know if we are creating or updating, and to get passwords if missing
   const existingSettings = await prisma.emailSettings.findUnique({
     where: { userId: session.user.id },
   });
+
+  if (!smtpPassword || !imapPassword) {
+    if (existingSettings) {
+      if (!smtpPassword) smtpPassword = existingSettings.smtpPassword || "";
+      if (!imapPassword) imapPassword = existingSettings.imapPassword || "";
+    }
+  }
+
+  // Verification Logic - START
+  // Only verify if the user has explicitly entered a password (indicating a change or first-time setup)
+  if (data.smtpPassword) {
+    if (!smtpPassword) throw new FrostError("SMTP Password is required", 400);
+
+    // 1. Verify SMTP
+    try {
+      const transporter = nodemailer.createTransport({
+        host: data.smtpHost,
+        port: data.smtpPort,
+        secure: data.smtpPort === 465,
+        auth: {
+          user: data.smtpUser,
+          pass: smtpPassword,
+        }
+      });
+      await transporter.verify();
+    } catch (error: unknown) {
+      console.log(error);
+      const isAuthError = (error as { responseCode: number }).responseCode === 535 || (error as { message: string }).message?.includes("Invalid login") || (error as { message: string }).message?.includes("Username and Password not accepted");
+      if (isAuthError) {
+        throw new FrostError("Invalid SMTP credentials. Please check your username and password.", 400);
+      }
+      throw new FrostError(`SMTP Connection Failed: ${(error as { message: string }).message}`, 400);
+    }
+  }
+
+  if (data.imapPassword) {
+    if (!imapPassword) throw new FrostError("IMAP Password is required", 400);
+
+    // 2. Verify IMAP
+    try {
+      const config: imaps.ImapSimpleOptions = {
+        imap: {
+          user: data.imapUser,
+          password: imapPassword,
+          host: data.imapHost,
+          port: data.imapPort,
+          tls: data.imapPort === 993,
+          tlsOptions: { rejectUnauthorized: false },
+          authTimeout: 5000
+        }
+      };
+      const connection = await imaps.connect(config);
+      await connection.end();
+    } catch (error: unknown) {
+      console.log(error);
+      const errorMessage = (error as { message: string }).message?.toLowerCase() || "";
+      const isAuthError = errorMessage.includes("login failed") || errorMessage.includes("authentication failed") || errorMessage.includes("invalid credentials");
+      if (isAuthError) {
+        throw new FrostError("Invalid IMAP credentials. Please check your username and password.", 400);
+      }
+      throw new FrostError(`IMAP Connection Failed: ${(error as { message: string }).message}`, 400);
+    }
+  }
 
   const settingsData = {
     fromName: data.fromName,
@@ -162,9 +231,69 @@ export async function updatePreferences(data: PreferencesPayload) {
 
     revalidatePath("/dashboard/settings");
   } catch (error) {
-    if (error instanceof ZodError) {
+    if (error instanceof FrostError) {
       throw new FrostError(error.message, 400);
     }
     throw error;
   }
+}
+
+export async function verifyEmailSettings(data: EmailSettingsPayload) {
+  const session = await authenticateUser();
+
+  // If password is not provided, fetch from DB
+  let smtpPassword = data.smtpPassword;
+  let imapPassword = data.imapPassword;
+
+  if (!smtpPassword || !imapPassword) {
+    const existing = await prisma.emailSettings.findUnique({
+      where: { userId: session.user.id }
+    });
+    if (existing) {
+      if (!smtpPassword) smtpPassword = existing.smtpPassword || "";
+      if (!imapPassword) imapPassword = existing.imapPassword || "";
+    }
+  }
+
+  if (!smtpPassword) throw new FrostError("SMTP Password is required for verification", 400);
+  if (!imapPassword) throw new FrostError("IMAP Password is required for verification", 400);
+
+  // 1. Verify SMTP
+  try {
+    const transporter = nodemailer.createTransport({
+      host: data.smtpHost,
+      port: data.smtpPort,
+      secure: data.smtpPort === 465,
+      auth: {
+        user: data.smtpUser,
+        pass: smtpPassword,
+      }
+    });
+    await transporter.verify();
+  } catch (error) {
+    console.log(error);
+    throw new FrostError(`SMTP Connection Failed`, 400);
+  }
+
+  // 2. Verify IMAP
+  try {
+    const config: imaps.ImapSimpleOptions = {
+      imap: {
+        user: data.imapUser,
+        password: imapPassword,
+        host: data.imapHost,
+        port: data.imapPort,
+        tls: data.imapPort === 993,
+        tlsOptions: { rejectUnauthorized: false },
+        authTimeout: 5000
+      }
+    };
+    const connection = await imaps.connect(config);
+    await connection.end();
+  } catch (error) {
+    console.log(error);
+    throw new FrostError(`IMAP Connection Failed`, 400);
+  }
+
+  return { success: true };
 }
