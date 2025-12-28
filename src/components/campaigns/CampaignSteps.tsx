@@ -1,7 +1,7 @@
 'use client';
 
 import { useOptimistic, useTransition, useState } from "react";
-import { LayoutTemplate, Clock, Trash2 } from "lucide-react";
+import { LayoutTemplate, Clock, Trash2, CornerDownRight } from "lucide-react";
 import { AddTemplateDropdown } from "./CampaignDetails";
 import { Template } from "@/types";
 import { useFrostFetch } from "@/hooks/useFrostFetch";
@@ -55,21 +55,23 @@ function StepItem({
           {index === 0 ? "First Mail" : `Follow Up ${index}`}
         </span>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-black/20 rounded px-2 py-0.5 border border-white/5">
-            <Clock size={12} className="text-slate-500" />
-            <span className="text-xs text-slate-500">Wait</span>
-            <input
-              type="text"
-              value={delay}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (/^\d*$/.test(val)) setDelay(val);
-              }}
-              onBlur={handleBlur}
-              className="w-8 bg-transparent text-xs text-center focus:outline-none text-white font-mono"
-            />
-            <span className="text-xs text-slate-500">days</span>
-          </div>
+          {index > 0 && (
+            <div className="flex items-center gap-1.5 bg-black/20 rounded px-2 py-0.5 border border-white/5">
+              <Clock size={12} className="text-slate-500" />
+              <span className="text-xs text-slate-500">Wait</span>
+              <input
+                type="text"
+                value={delay}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d*$/.test(val)) setDelay(val);
+                }}
+                onBlur={handleBlur}
+                className="w-8 bg-transparent text-xs text-center focus:outline-none text-white font-mono"
+              />
+              <span className="text-xs text-slate-500">days</span>
+            </div>
+          )}
 
           {isLast && (
             <Button
@@ -84,7 +86,25 @@ function StepItem({
         </div>
       </div>
       <div className="font-medium text-white">{step.template.name}</div>
-      <div className="text-sm text-slate-400 truncate">{step.template.subject}</div>
+      <div className="flex flex-col gap-1 mt-0.5">
+        <div className="flex items-center gap-2 text-sm overflow-hidden">
+          <span className="text-slate-500 shrink-0">Subject:</span>
+          <span className={`truncate ${index > 0 ? "line-through opacity-50 text-slate-500" : "text-slate-300"}`}>
+            {step.template.subject}
+          </span>
+          {index === 0 && (
+            <span className="shrink-0 text-[10px] font-medium text-cyan-400 bg-cyan-400/10 px-1.5 py-0.5 rounded border border-cyan-400/20">
+              Thread Subject
+            </span>
+          )}
+        </div>
+        {index > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 ml-1">
+            <CornerDownRight size={12} className="opacity-50" />
+            <span>Subject ignored • Sends as reply to thread</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

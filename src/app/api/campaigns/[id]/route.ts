@@ -93,8 +93,13 @@ export const PATCH = safeAPI(async (req: Request, session: FrostSession, { param
             targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
           } else {
             if (lastLog && lastLog.sequence === nextSeq - 1 && lastLog.sentAt) {
-              const delayMs = (nextStep.delay || 1) * 24 * 60 * 60 * 1000;
-              targetTime = new Date(lastLog.sentAt.getTime() + delayMs);
+              const delayDays = nextStep.delay;
+              targetTime = new Date(lastLog.sentAt);
+              targetTime.setDate(targetTime.getDate() + delayDays);
+
+              // Set specific time from preference
+              const [hours, minutes] = mailSendingTime.split(':').map(Number);
+              targetTime.setUTCHours(hours, minutes, 0, 0);
 
               // Apply weekend check logic specifically here
               targetTime = adjustForWeekend(targetTime, sendOnWeekends);
