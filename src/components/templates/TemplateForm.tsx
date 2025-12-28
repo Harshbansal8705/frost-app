@@ -69,6 +69,7 @@ export function TemplateForm({ initialData, templateId, onSuccess, onCancel }: T
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, attachments }),
+        skipRefresh: true,
         onSuccess: (data) => {
           toast.success("Template saved");
           onSuccess(data);

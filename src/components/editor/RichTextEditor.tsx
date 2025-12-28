@@ -72,6 +72,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b border-white/5 bg-white/5">
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -86,6 +87,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         </Button>
 
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -102,6 +104,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         <div className="w-px h-4 bg-white/10 mx-1" />
 
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={setLink}
@@ -115,6 +118,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         </Button>
 
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={() => editor.chain().focus().unsetLink().run()}
@@ -128,6 +132,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         <div className="w-px h-4 bg-white/10 mx-1" />
 
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -141,6 +146,7 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         </Button>
 
         <Button
+          type="button"
           variant="ghost"
           size="icon"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}

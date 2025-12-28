@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { safeAPI } from "@/lib/api";
 import prisma from "@/lib/prisma";
 import { FrostError, FrostSession } from "@/types";
+import { revalidatePath } from "next/cache";
 
 export const GET = safeAPI(async (req: Request, session: FrostSession, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
@@ -49,6 +50,8 @@ export const PUT = safeAPI(async (req: Request, session: FrostSession, { params 
     }
   });
 
+  revalidatePath("/dashboard/templates");
+
   return NextResponse.json(updatedTemplate);
 });
 
@@ -86,6 +89,8 @@ export const DELETE = safeAPI(async (req: Request, session: FrostSession, { para
       }
     },
   });
+
+  revalidatePath("/dashboard/templates");
 
   return new NextResponse(null, { status: 204 });
 });

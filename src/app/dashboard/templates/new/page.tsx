@@ -22,7 +22,6 @@ export default function NewTemplatePage() {
         <TemplateForm
           onSuccess={() => {
             router.push("/dashboard/templates");
-            router.refresh();
           }}
         />
       </div>

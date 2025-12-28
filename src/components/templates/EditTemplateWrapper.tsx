@@ -18,7 +18,6 @@ export function EditTemplateWrapper({ template }: { template: Template }) {
       }}
       onSuccess={() => {
         router.push("/dashboard/templates");
-        router.refresh();
       }}
       onCancel={() => router.back()}
     />

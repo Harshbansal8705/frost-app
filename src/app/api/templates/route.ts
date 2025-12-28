@@ -3,6 +3,7 @@ import { safeAPI } from "@/lib/api";
 import prisma from "@/lib/prisma";
 import { authenticateUser } from "@/lib/auth-helper";
 import { FrostError } from "@/types";
+import { revalidatePath } from "next/cache";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const GET = safeAPI(async (req: Request) => {
@@ -37,6 +38,8 @@ export const POST = safeAPI(async (req: Request) => {
       }
     },
   });
+
+  revalidatePath("/dashboard/templates");
 
   return NextResponse.json(template);
 });
