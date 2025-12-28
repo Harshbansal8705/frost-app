@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Save, Loader2, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
-import { FrostError, Template } from "@/types";
+import { Template } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
 
 interface TemplateFormProps {
   initialData?: {
@@ -25,32 +26,25 @@ export function TemplateForm({ initialData, templateId, onSuccess, onCancel }: T
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { frostFetch } = useFrostFetch();
 
   const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    try {
-      const uploadFormData = new FormData();
-      uploadFormData.append("file", file);
+    const uploadFormData = new FormData();
+    uploadFormData.append("file", file);
 
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: uploadFormData,
-      });
-
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      setAttachments(prev => [...prev, data.url]);
-      toast.success("File uploaded");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Some error occurred");
-    } finally {
-      setIsUploading(false);
-      e.target.value = "";
-    }
+    await frostFetch<{ url: string }>("/api/upload", {
+      method: "POST",
+      body: uploadFormData,
+      onSuccess: (data) => {
+        setAttachments(prev => [...prev, data.url]);
+      }
+    });
+    setIsUploading(false);
+    e.target.value = "";
   };
 
   const removeAttachment = (index: number) => {
@@ -71,19 +65,17 @@ export function TemplateForm({ initialData, templateId, onSuccess, onCancel }: T
       const url = templateId ? `/api/templates/${templateId}` : "/api/templates";
       const method = templateId ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      await frostFetch<Template>(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, attachments }),
+        onSuccess: (data) => {
+          toast.success("Template saved");
+          onSuccess(data);
+        }
       });
-
-      if (!res.ok) throw new Error("Failed to save template");
-
-      const savedTemplate = await res.json();
-      toast.success("Template saved");
-      onSuccess(savedTemplate);
-    } catch (dffof) {
-      const message = dffof instanceof Error ? dffof.message : "Failed to save template";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save template";
       toast.error(message);
       setError(message);
     } finally {

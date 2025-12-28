@@ -1,5 +1,5 @@
 import { SettingsForm } from "@/components/settings/SettingsForm";
-import { getSettings } from "./actions";
+import { getSettings } from "@/lib/settings";
 
 export const metadata = {
   title: "Settings | Frost",

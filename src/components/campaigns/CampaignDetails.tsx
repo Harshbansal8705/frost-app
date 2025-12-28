@@ -2,34 +2,39 @@
 
 import { useState } from "react";
 import { Plus, Trash2, FilePlus } from "lucide-react";
-import { addContactToCampaign, removeContactFromCampaign, addTemplateToCampaign, updateCampaign } from "@/app/dashboard/campaigns/actions";
-import { FrostError, Template } from "@/types";
+import { Template } from "@/types";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
 import { CampaignStatus } from "@/generated/prisma/enums";
+import { Contact } from "@/generated/prisma/client";
 import { toast } from "sonner";
 import { TemplateForm } from "@/components/templates/TemplateForm";
 import { Button } from "@/components/ui/Button";
-
 import StatusBadge from "@/components/campaigns/StatusBadge";
+
 
 export const EditCampaignTitle = ({ campaignId, initialTitle, initialStatus = CampaignStatus.DRAFT }: { campaignId: string, initialTitle: string, initialStatus?: CampaignStatus }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [status, setStatus] = useState<CampaignStatus>(initialStatus);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { frostFetch } = useFrostFetch();
 
   const handleStatusChange = async (newStatus: CampaignStatus) => {
     // Optimistic update
     const previousStatus = status;
     setStatus(newStatus);
 
-    try {
-      await updateCampaign(campaignId, { status: newStatus });
-      toast.success(`Campaign marked as ${newStatus.toLowerCase()}`);
-    } catch (error) {
-      setStatus(previousStatus);
-      console.error(error);
-      toast.error("Failed to update status");
-    }
+    await frostFetch<null>(`/api/campaigns/${campaignId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+      onSuccess: () => {
+        toast.success(`Campaign marked as ${newStatus.toLowerCase()}`);
+      },
+      onError: () => {
+        setStatus(previousStatus);
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,16 +45,16 @@ export const EditCampaignTitle = ({ campaignId, initialTitle, initialStatus = Ca
     }
 
     setIsSubmitting(true);
-    try {
-      await updateCampaign(campaignId, { title });
-      setIsEditing(false);
-      toast.success("Title updated");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Some error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await frostFetch<null>(`/api/campaigns/${campaignId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+      onSuccess: () => {
+        setIsEditing(false);
+        toast.success("Title updated");
+      },
+    });
+    setIsSubmitting(false);
   };
 
   if (isEditing) {
@@ -132,25 +137,26 @@ export const ContactsActions = ({ campaignId }: { campaignId: string }) => {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { frostFetch } = useFrostFetch();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !company) return;
 
     setIsSubmitting(true);
-    try {
-      await addContactToCampaign(campaignId, { email, name, companyName: company });
-      setIsOpen(false);
-      setEmail("");
-      setName("");
-      setCompany("");
-      toast.success("Contact added");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Failed to add contact");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await frostFetch<Contact>(`/api/campaigns/${campaignId}/contacts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name, companyName: company }),
+      onSuccess: () => {
+        setIsOpen(false);
+        setEmail("");
+        setName("");
+        setCompany("");
+        toast.success("Contact added");
+      },
+    });
+    setIsSubmitting(false);
   };
 
   return (
@@ -216,18 +222,20 @@ export const ContactsActions = ({ campaignId }: { campaignId: string }) => {
 
 export const RemoveContactButton = ({ contactId }: { contactId: string }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { frostFetch } = useFrostFetch();
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this contact?")) return;
     setIsDeleting(true);
-    try {
-      await removeContactFromCampaign(contactId);
-      toast.success("Contact removed");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Failed to delete contact");
-      setIsDeleting(false);
-    }
+    await frostFetch<null>(`/api/contacts/${contactId}`, {
+      method: "DELETE",
+      onSuccess: () => {
+        toast.success("Contact removed");
+      },
+      onError: () => {
+        setIsDeleting(false);
+      }
+    });
   };
 
   return (
@@ -255,23 +263,29 @@ export const AddTemplateDropdown = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { frostFetch } = useFrostFetch();
 
   const handleSelect = async (templateId: string) => {
     setIsSubmitting(true);
-    try {
-      if (onAdd) {
+    if (onAdd) {
+      try {
         await onAdd(templateId);
-      } else {
-        await addTemplateToCampaign(campaignId, templateId);
-        toast.success("Step added");
+        setIsOpen(false);
+      } catch {
+        toast.error("Failed to add template");
       }
-      setIsOpen(false);
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Failed to add template");
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      await frostFetch<null>(`/api/campaigns/${campaignId}/templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId }),
+        onSuccess: () => {
+          toast.success("Step added");
+          setIsOpen(false);
+        },
+      });
     }
+    setIsSubmitting(false);
   };
 
   return (

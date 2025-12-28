@@ -4,16 +4,16 @@ import { useState } from "react";
 import { Pencil, Trash2, FileText } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { Template, FrostError } from "@/types";
+import { Template } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
 
 interface TemplateCardProps {
   template: Template;
 }
 
 export function TemplateCard({ template }: TemplateCardProps) {
-  const router = useRouter();
+  const { frostFetch } = useFrostFetch();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
 
@@ -22,41 +22,25 @@ export function TemplateCard({ template }: TemplateCardProps) {
 
     setIsDeleting(true);
 
-    try {
-      const res = await fetch(`/api/templates/${template.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new FrostError(data.error || "Failed to delete", res.status);
+    await frostFetch<null>(`/api/templates/${template.id}`, {
+      method: "DELETE",
+      onSuccess: async () => {
+        setIsDeleted(true);
+        toast.success("Template deleted");
+      },
+      onError: () => {
+        setIsDeleted(false);
+        setIsDeleting(false);
       }
-
-      // Animate out on success
-      setIsDeleted(true);
-      // Wait for animation to finish
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      toast.success("Template deleted");
-      router.refresh();
-    } catch (error) {
-      // Revert if failed
-      setIsDeleted(false);
-      setIsDeleting(false);
-
-      if (error instanceof FrostError) {
-        toast.error(error.message);
-      } else if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("Failed to delete template");
-      }
-    }
+    });
   };
 
   return (
     <div className={`group bg-slate-900/50 border border-white/10 rounded-xl p-4 md:p-6 transition-all duration-500 relative ${isDeleted
-      ? 'opacity-0 scale-90 pointer-events-none' // Animate out
+      ? 'opacity-0 scale-90 pointer-events-none'
       : isDeleting
-        ? 'bg-red-500/5 border-red-500/30 backdrop-blur-sm scale-[0.98] animate-pulse pointer-events-none' // Glass deletion state
-        : 'hover:border-cyan-500/30' // Normal state hover effect
+        ? 'bg-red-500/5 border-red-500/30 backdrop-blur-sm scale-[0.98] animate-pulse pointer-events-none'
+        : 'hover:border-cyan-500/30'
       }`}>
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
         <Link href={`/dashboard/templates/${template.id}`}>

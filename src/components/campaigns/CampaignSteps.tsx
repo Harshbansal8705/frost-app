@@ -4,11 +4,7 @@ import { useOptimistic, useTransition, useState } from "react";
 import { LayoutTemplate, Clock, Trash2 } from "lucide-react";
 import { AddTemplateDropdown } from "./CampaignDetails";
 import { Template } from "@/types";
-import {
-  addTemplateToCampaign,
-  removeCampaignTemplate,
-  updateCampaignTemplateDelay
-} from "@/app/dashboard/campaigns/actions";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 
@@ -116,6 +112,8 @@ export function CampaignSteps({
 
   const [, startTransition] = useTransition();
 
+  const { frostFetch } = useFrostFetch();
+
   const handleAddTemplate = async (templateId: string) => {
     const template = allTemplates.find(t => t.id === templateId);
     if (!template) return;
@@ -128,19 +126,20 @@ export function CampaignSteps({
     const newStep: CampaignTemplateWithDetails = {
       id: `temp-${Date.now()}`, // Temporary ID
       sequence: nextSequence,
-      delay: 1, // Default delay, adjust as per logic
+      delay: 1, // Default delay
       template: template
     };
 
     startTransition(async () => {
       dispatch({ type: 'ADD', payload: newStep });
-      try {
-        await addTemplateToCampaign(campaignId, templateId);
-        toast.success("Step added");
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to add step");
-      }
+      await frostFetch<null>(`/api/campaigns/${campaignId}/templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId }),
+        onSuccess: () => {
+          toast.success("Step added");
+        },
+      });
     });
   };
 
@@ -151,13 +150,12 @@ export function CampaignSteps({
 
     startTransition(async () => {
       dispatch({ type: 'REMOVE', id });
-      try {
-        await removeCampaignTemplate(id);
-        toast.success("Step removed");
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to remove step");
-      }
+      await frostFetch<null>(`/api/campaigns/templates/${id}`, {
+        method: "DELETE",
+        onSuccess: () => {
+          toast.success("Step removed");
+        },
+      });
     });
   };
 
@@ -166,13 +164,14 @@ export function CampaignSteps({
 
     startTransition(async () => {
       dispatch({ type: 'UPDATE_DELAY', id, delay });
-      try {
-        await updateCampaignTemplateDelay(id, delay);
-        toast.success("Delay updated");
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to update delay");
-      }
+      await frostFetch<null>(`/api/campaigns/templates/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delay }),
+        onSuccess: () => {
+          toast.success("Delay updated");
+        },
+      });
     });
   };
 

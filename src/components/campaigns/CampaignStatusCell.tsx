@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { CampaignStatus } from "@/generated/prisma/client"; // Adjust import based on where enums are
-import { updateCampaign } from "@/app/dashboard/campaigns/actions";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
+
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner"; // Assuming sonner is used, or basic alert
 
@@ -26,7 +27,9 @@ interface CampaignStatusCellProps {
 
 export default function CampaignStatusCell({ id, status: initialStatus }: CampaignStatusCellProps) {
   const [status, setStatus] = useState<CampaignStatus>(initialStatus);
-  const [updating, setUpdating] = useState(false);
+
+
+  const { frostFetch, loading } = useFrostFetch();
 
   const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     // Prevent event from bubbling if it's inside a row click handler
@@ -34,18 +37,18 @@ export default function CampaignStatusCell({ id, status: initialStatus }: Campai
 
     const newStatus = e.target.value as CampaignStatus;
     setStatus(newStatus); // Optimistic update
-    setUpdating(true);
 
-    try {
-      await updateCampaign(id, { status: newStatus });
-      toast.success("Campaign status updated");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to update status");
-      setStatus(status); // Revert
-    } finally {
-      setUpdating(false);
-    }
+    await frostFetch<null>(`/api/campaigns/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+      onSuccess: () => {
+        toast.success("Campaign status updated");
+      },
+      onError: () => {
+        setStatus(status);
+      }
+    });
   };
 
   const colorClass = statusColors[status.toLowerCase()] || statusColors.draft;
@@ -55,7 +58,7 @@ export default function CampaignStatusCell({ id, status: initialStatus }: Campai
       <select
         value={status}
         onChange={handleChange}
-        disabled={updating}
+        disabled={loading}
         className={`h-7 pl-2 pr-8 text-xs font-medium rounded-full border appearance-none cursor-pointer outline-none focus:ring-1 focus:ring-white/20 transition-colors ${colorClass} bg-transparent`}
       >
         <option value="DRAFT" className="bg-slate-900 text-slate-400">Draft</option>
@@ -64,7 +67,7 @@ export default function CampaignStatusCell({ id, status: initialStatus }: Campai
 
       {/* Custom Arrow / Loader */}
       <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-        {updating ? (
+        {loading ? (
           <Loader2 size={10} className="animate-spin opacity-70" />
         ) : (
           <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-4 border-t-current opacity-50" />

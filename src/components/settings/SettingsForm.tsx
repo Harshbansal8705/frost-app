@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { updateProfile, updateEmailSettings, updatePreferences } from "@/app/dashboard/settings/actions";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Info, ChevronRight } from "lucide-react";
-import { FrostError, SettingsData } from "@/types";
+import { SettingsData } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
 
 // Simple UI components to avoid dependency on missing UI library
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -62,10 +61,9 @@ const HelperText = ({ children }: { children: React.ReactNode }) => (
 
 export function SettingsForm({ initialData }: { initialData: SettingsData }) {
   const [activeTab, setActiveTab] = useState<"profile" | "email" | "preferences">("profile");
-  const [loading, setLoading] = useState(false);
+  const { frostFetch, loading } = useFrostFetch();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const session = useSession();
-  const router = useRouter();
 
   const [profile, setProfile] = useState({
     name: initialData.name || "",
@@ -104,53 +102,46 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await updateProfile(profile);
-      router.refresh();
-      toast.success("Profile updated successfully");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Failed to update profile");
-    } finally {
-      setLoading(false);
-    }
+    await frostFetch<null>("/api/settings/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(profile),
+      onSuccess: () => {
+        toast.success("Profile updated successfully");
+      },
+    });
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await updateEmailSettings({
-        ...emailSettings,
-        smtpPort: Number(emailSettings.smtpPort),
-        imapPort: Number(emailSettings.imapPort),
-      });
-      router.refresh();
-      // Clear passwords from state for security after save
-      setEmailSettings(prev => ({ ...prev, smtpPassword: "", imapPassword: "" }));
-      toast.success("Email settings saved successfully");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Failed to save email settings");
-    } finally {
-      setLoading(false);
-    }
+    const payload = {
+      ...emailSettings,
+      smtpPort: Number(emailSettings.smtpPort),
+      imapPort: Number(emailSettings.imapPort),
+    };
+
+    await frostFetch<null>("/api/settings/email", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      onSuccess: () => {
+        // Clear passwords from state for security after save
+        setEmailSettings(prev => ({ ...prev, smtpPassword: "", imapPassword: "" }));
+        toast.success("Email settings saved successfully");
+      },
+    });
   };
 
   const handlePreferencesSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await updatePreferences(preferences);
-      router.refresh();
-      toast.success("Preferences updated successfully");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof FrostError ? error.message : "Failed to update preferences");
-    } finally {
-      setLoading(false);
-    }
+    await frostFetch<null>("/api/settings/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(preferences),
+      onSuccess: () => {
+        toast.success("Preferences updated successfully");
+      },
+    });
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Status } from "@/generated/prisma/enums";
-import { updateContactStatus } from "@/app/dashboard/campaigns/actions";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,25 +22,25 @@ interface ContactStatusCellProps {
 
 export default function ContactStatusCell({ id, status: initialStatus }: ContactStatusCellProps) {
   const [status, setStatus] = useState<Status>(initialStatus as Status);
-  const [updating, setUpdating] = useState(false);
+  const { frostFetch, loading } = useFrostFetch();
 
   const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     e.stopPropagation();
 
     const newStatus = e.target.value as Status;
     setStatus(newStatus);
-    setUpdating(true);
 
-    try {
-      await updateContactStatus(id, newStatus);
-      toast.success("Contact status updated");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to update status");
-      setStatus(status);
-    } finally {
-      setUpdating(false);
-    }
+    await frostFetch<null>(`/api/contacts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+      onSuccess: () => {
+        toast.success("Contact status updated");
+      },
+      onError: () => {
+        setStatus(status);
+      }
+    });
   };
 
   const colorClass = statusColors[status] || statusColors.STOPPED;
@@ -50,7 +50,7 @@ export default function ContactStatusCell({ id, status: initialStatus }: Contact
       <select
         value={status}
         onChange={handleChange}
-        disabled={updating}
+        disabled={loading}
         className={`h-7 pl-2 pr-8 text-xs font-medium rounded-full border appearance-none cursor-pointer outline-none focus:ring-1 focus:ring-white/20 transition-colors ${colorClass} bg-transparent`}
       >
         <option value="ACTIVE" className="bg-slate-900 text-blue-400">Active</option>
@@ -61,7 +61,7 @@ export default function ContactStatusCell({ id, status: initialStatus }: Contact
       </select>
 
       <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-        {updating ? (
+        {loading ? (
           <Loader2 size={10} className="animate-spin opacity-70" />
         ) : (
           <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-4 border-t-current opacity-50" />

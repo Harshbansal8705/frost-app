@@ -34,11 +34,6 @@ export default async function CampaignDetailsPage({ params }: { params: Promise<
     }
   });
 
-  campaign?.contacts.forEach(c => {
-    console.log(c.email);
-    console.log(c.emailLogs);
-  })
-
   if (!campaign) {
     return (
       <div className="flex flex-col items-center justify-center py-20">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ArrowRight, Check, FileText, Users, Rocket, Plus, Trash2, Paperclip, X } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
@@ -8,6 +8,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TemplateForm } from "@/components/templates/TemplateForm";
 import { Button } from "@/components/ui/Button";
+import { useFrostFetch } from "@/hooks/useFrostFetch";
+import { Template, Lead, SequenceStep } from "@/types";
+import { Campaign } from "@/generated/prisma/client";
+
 
 const steps = [
   { id: 1, name: "Setup", icon: FileText },
@@ -16,12 +20,10 @@ const steps = [
   { id: 4, name: "Review", icon: Check },
 ];
 
-import { Template, Lead, SequenceStep } from "@/types";
-
 export function NewCampaignWizard() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { frostFetch, loading: isSubmitting } = useFrostFetch();
   const [formData, setFormData] = useState({
     name: "",
     leads: [] as Lead[],
@@ -39,16 +41,15 @@ export function NewCampaignWizard() {
   // Templates State
   const [templates, setTemplates] = useState<Template[]>([]);
 
+  const fetchTemplates = useCallback(async () => {
+    await frostFetch<Template[]>("/api/templates", {
+      onSuccess: (data) => setTemplates(data),
+    });
+  }, [frostFetch]);
+
   useEffect(() => {
     fetchTemplates();
-  }, []);
-
-  const fetchTemplates = () => {
-    fetch("/api/templates")
-      .then(res => res.json())
-      .then(data => setTemplates(data))
-      .catch(err => console.error("Failed to load templates", err));
-  };
+  }, [fetchTemplates]);
 
   const loadTemplate = (stepIndex: number, templateId: string) => {
     const template = templates.find(t => t.id === templateId);
@@ -142,36 +143,19 @@ export function NewCampaignWizard() {
     setFormData(prev => ({ ...prev, sequence: newSequence }));
   };
 
-
-
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
     setError(null);
-    try {
-      const res = await fetch("/api/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Failed to create campaign");
-      }
-
-      toast.success("Campaign created successfully!");
-      router.push("/dashboard/campaigns");
-      router.refresh();
-    } catch (err: unknown) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : "Failed to create campaign";
-      toast.error(message);
-      setError(message || "Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await frostFetch<Campaign>("/api/campaigns", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+      onSuccess: () => {
+        toast.success("Campaign created successfully!");
+        router.push("/dashboard/campaigns");
+      },
+    });
   };
 
   return (

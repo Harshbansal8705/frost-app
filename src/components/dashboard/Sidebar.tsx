@@ -14,10 +14,10 @@ import clsx from "clsx";
 import { Button } from "@/components/ui/Button";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Campaigns", href: "/dashboard/campaigns", icon: Send },
-  { name: "Templates", href: "/dashboard/templates", icon: FileText },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: "Dashboard", href: "/dashboard" as const, icon: LayoutDashboard },
+  { name: "Campaigns", href: "/dashboard/campaigns" as const, icon: Send },
+  { name: "Templates", href: "/dashboard/templates" as const, icon: FileText },
+  { name: "Settings", href: "/dashboard/settings" as const, icon: Settings },
 ];
 
 export function Sidebar() {
