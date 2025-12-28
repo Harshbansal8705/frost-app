@@ -69,7 +69,7 @@ export function adjustForWeekend(date: Date): Date {
  */
 export function getFirstScheduleTime(timeStr: string = "09:00", timezone: string, allowWeekends: boolean): Date {
   const now = new Date();
-  let targetDate = strToTime(timeStr);
+  let targetDate = strToTime(timeStr, timezone);
 
   // If target time for today has already passed, move to tomorrow
   if (localToUtc(targetDate, timezone) <= now) targetDate.setDate(targetDate.getDate() + 1);
@@ -99,9 +99,9 @@ export function getNextScheduleTime(timeStr: string, timezone: string, allowWeek
   return localToUtc(targetDate, timezone);
 }
 
-export function strToTime(timeStr: string): Date {
+export function strToTime(timeStr: string, timezone: string): Date {
   const [hours, minutes] = timeStr.split(':').map(Number);
-  const d = new Date();
+  const d = utcToLocal(new Date(), timezone);
   d.setUTCHours(hours, minutes, 0, 0);
   return d;
 }
