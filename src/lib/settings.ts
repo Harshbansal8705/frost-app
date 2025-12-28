@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { FrostError } from "@/types";
 import { authenticateUser } from "@/lib/auth-helper";
-import { getOffsetMs, adjustTime } from "@/lib/utils";
+
 
 export async function getSettings() {
   const session = await authenticateUser();
@@ -20,12 +20,6 @@ export async function getSettings() {
 
   if (!user) {
     throw new FrostError("User not found", 404);
-  }
-
-  if (user.preferences) {
-    const offset = getOffsetMs(user.preferences.timezone);
-    // UTC to Local => UTC + Offset
-    user.preferences.mailSendingTime = adjustTime(user.preferences.mailSendingTime, offset);
   }
 
   return {

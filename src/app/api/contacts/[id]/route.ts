@@ -3,7 +3,7 @@ import { safeAPI } from "@/lib/api";
 import prisma from "@/lib/prisma";
 import { FrostError, FrostSession } from "@/types";
 import { CampaignStatus, EmailLogStatus, Status } from "@/generated/prisma/enums";
-import { adjustForWeekend, getScheduleTime } from "@/lib/utils";
+import { getFirstScheduleTime, getNextScheduleTime } from "@/lib/utils";
 
 
 export const DELETE = safeAPI(async (req: Request, session: FrostSession, { params }) => {
@@ -68,70 +68,64 @@ export const PATCH = safeAPI(async (req: Request, session: FrostSession, { param
       where: { id: contact.campaignId }
     });
 
-    if (campaign?.status === CampaignStatus.ACTIVE) {
-      const existingScheduled = await prisma.emailLog.findFirst({
-        where: {
-          contactId,
-          status: EmailLogStatus.SCHEDULED
-        }
-      });
-
-      if (!existingScheduled) {
-        // Resume logic
-        const lastSentLog = await prisma.emailLog.findFirst({
-          where: {
-            contactId,
-            status: EmailLogStatus.SENT
-          },
-          orderBy: { sequence: 'desc' }
-        });
-
-        let nextSeq = 1;
-        if (lastSentLog) {
-          nextSeq = lastSentLog.sequence + 1;
-        }
-
-        const nextStep = await prisma.campaignTemplate.findFirst({
-          where: {
-            campaignId: contact.campaignId,
-            sequence: nextSeq
-          }
-        });
-
-        if (nextStep) {
-          const { mailSendingTime, sendOnWeekends } = await prisma.preferences.findUnique({
-            where: { userId: session.user.id },
-            select: { mailSendingTime: true, sendOnWeekends: true }
-          }) || { mailSendingTime: "09:00", sendOnWeekends: false };
-
-          let targetTime: Date;
-
-          if (nextSeq === 1) {
-            targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
-          } else {
-            const delayMs = (nextStep.delay || 1) * 24 * 60 * 60 * 1000;
-            const baseTime = lastSentLog?.sentAt ? lastSentLog.sentAt : new Date();
-            targetTime = new Date(baseTime.getTime() + delayMs);
-            targetTime = adjustForWeekend(targetTime, sendOnWeekends);
-
-            if (targetTime.getTime() < Date.now()) {
-              targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
-            }
-          }
-
-          await prisma.emailLog.create({
-            data: {
-              campaignId: contact.campaignId,
-              templateId: nextStep.templateId,
-              contactId: contact.id,
-              sequence: nextSeq,
-              status: EmailLogStatus.SCHEDULED,
-              scheduledAt: targetTime
-            }
-          });
-        }
-      }
+    if (campaign?.status !== CampaignStatus.ACTIVE) {
+      return new NextResponse(null, { status: 204 });
     }
+
+    const existingScheduled = await prisma.emailLog.findFirst({
+      where: {
+        contactId,
+        status: EmailLogStatus.SCHEDULED
+      }
+    });
+
+    if (existingScheduled) {
+      return new NextResponse(null, { status: 204 });
+    }
+
+    const lastSentLog = await prisma.emailLog.findFirst({
+      where: {
+        contactId,
+        status: EmailLogStatus.SENT,
+      },
+      orderBy: { sequence: 'desc' }
+    });
+
+    let nextSeq = 1;
+    if (lastSentLog) nextSeq = lastSentLog.sequence + 1;
+
+    const nextStep = await prisma.campaignTemplate.findFirst({
+      where: {
+        campaignId: contact.campaignId,
+        sequence: nextSeq
+      }
+    });
+
+    if (!nextStep) return new NextResponse(null, { status: 204 });
+
+    const { mailSendingTime, sendOnWeekends, timezone } = await prisma.preferences.findUnique({
+      where: { userId: session.user.id },
+      select: { mailSendingTime: true, sendOnWeekends: true, timezone: true }
+    }) || { mailSendingTime: "09:00", sendOnWeekends: false, timezone: "Asia/Kolkata" };
+
+    let targetTime: Date;
+
+    if (nextSeq === 1) {
+      targetTime = getFirstScheduleTime(mailSendingTime, timezone, sendOnWeekends);
+    } else {
+      targetTime = getNextScheduleTime(mailSendingTime, timezone, sendOnWeekends, lastSentLog?.sentAt || new Date(), nextStep.delay);
+    }
+
+    await prisma.emailLog.create({
+      data: {
+        campaignId: contact.campaignId,
+        templateId: nextStep.templateId,
+        contactId: contact.id,
+        sequence: nextSeq,
+        status: EmailLogStatus.SCHEDULED,
+        scheduledAt: targetTime
+      }
+    });
   }
 
   return new NextResponse(null, { status: 204 });

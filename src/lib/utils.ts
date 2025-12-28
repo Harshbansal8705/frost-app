@@ -5,7 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getOffsetMs(timeZone: string) {
+/**
+ * Get the offset in milliseconds between UTC and a target timezone
+ * for a given date (accounts for DST).
+ *
+ * @param timezone - IANA timezone name (e.g., "Asia/Kolkata")
+ * @param date - Reference date (defaults to now)
+ * @returns Offset in milliseconds
+ */
+export function getOffsetMs(timezone: string, date: Date = new Date()): number {
   const getParts = (tz: string) => {
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: tz,
@@ -16,31 +24,34 @@ export function getOffsetMs(timeZone: string) {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric'
-    }).formatToParts(new Date());
+    }).formatToParts(date);
+
     const p: Record<string, string> = {};
-    parts.forEach(({ type, value }) => p[type] = value);
-    return new Date(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), Number(p.second));
+    for (const { type, value } of parts) {
+      p[type] = value;
+    }
+
+    return new Date(
+      Number(p.year),
+      Number(p.month) - 1,
+      Number(p.day),
+      Number(p.hour),
+      Number(p.minute),
+      Number(p.second)
+    );
   };
 
-  const dateInTarget = getParts(timeZone);
-  const dateInUTC = getParts('UTC');
-  return dateInTarget.getTime() - dateInUTC.getTime();
+  return getParts(timezone).getTime() - getParts('UTC').getTime();
 }
 
-export function adjustTime(time: string, offsetMs: number) {
-  if (!time) return time;
-  const [h, m] = time.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  const result = new Date(d.getTime() + offsetMs);
-  return `${result.getHours().toString().padStart(2, '0')}:${result.getMinutes().toString().padStart(2, '0')}`;
-}
-
-export function adjustForWeekend(date: Date, allowWeekends: boolean): Date {
-  if (allowWeekends) return date;
-
+/**
+ * Adjusts the date to the next available weekday
+ * @param date The date to adjust
+ * @returns The adjusted date
+ */
+export function adjustForWeekend(date: Date): Date {
   const d = new Date(date);
-  const day = d.getDay();
+  const day = d.getUTCDay();
 
   // 0 = Sunday, 6 = Saturday
   if (day === 0) {
@@ -50,22 +61,64 @@ export function adjustForWeekend(date: Date, allowWeekends: boolean): Date {
     // Saturday -> Monday (+2 days)
     d.setDate(d.getDate() + 2);
   }
-
   return d;
 }
 
-export function getScheduleTime(timeStr: string = "09:00", allowWeekends: boolean = false): Date {
+/**
+ * Get the schedule time in UTC Timezone
+ */
+export function getFirstScheduleTime(timeStr: string = "09:00", timezone: string, allowWeekends: boolean): Date {
+  const now = new Date();
+  let targetDate = strToTime(timeStr);
+
+  // If target time for today has already passed, move to tomorrow
+  if (localToUtc(targetDate, timezone) <= now) targetDate.setDate(targetDate.getDate() + 1);
+
+  // Check for weekends
+  if (!allowWeekends) targetDate = adjustForWeekend(targetDate);
+
+  return localToUtc(targetDate, timezone);
+}
+
+/**
+ * Get the next schedule time in UTC Timezone
+*/
+export function getNextScheduleTime(timeStr: string, timezone: string, allowWeekends: boolean, lastSentAt: Date, delayDays: number): Date {
+  let targetDate = utcToLocal(new Date(lastSentAt.getTime() + delayDays * 24 * 60 * 60 * 1000), timezone);
   const now = new Date();
   const [hours, minutes] = timeStr.split(':').map(Number);
 
-  const targetDate = new Date(now);
   targetDate.setUTCHours(hours, minutes, 0, 0);
 
   // If target time for today has already passed, move to tomorrow
-  if (targetDate <= now) {
-    targetDate.setDate(targetDate.getDate() + 1);
-  }
+  if (localToUtc(targetDate, timezone) <= now) targetDate.setDate(targetDate.getDate() + 1);
 
   // Check for weekends
-  return adjustForWeekend(targetDate, allowWeekends);
+  if (!allowWeekends) targetDate = adjustForWeekend(targetDate);
+
+  return localToUtc(targetDate, timezone);
+}
+
+export function strToTime(timeStr: string): Date {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const d = new Date();
+  d.setUTCHours(hours, minutes, 0, 0);
+  return d;
+}
+
+export function timeToStr(date: Date): string {
+  const d = new Date(date.getTime());
+  return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+}
+
+export function localToUtc(localDate: Date, timezone: string): Date {
+  const offsetMs = getOffsetMs(timezone, localDate);
+  const d = new Date(localDate.getTime() - offsetMs);
+  return d;
+}
+
+export function utcToLocal(utcDate: Date, timezone: string): Date {
+  const offsetMs = getOffsetMs(timezone, utcDate);
+  const d = new Date(utcDate.getTime() + offsetMs);
+  return d;
 }

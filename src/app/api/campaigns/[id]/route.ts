@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { FrostError, FrostSession } from "@/types";
 import { CampaignStatus, EmailLogStatus, Status } from "@/generated/prisma/enums";
 import { EmailLogCreateManyInput } from "@/generated/prisma/models";
-import { adjustForWeekend, getScheduleTime } from "@/lib/utils";
+import { getFirstScheduleTime, getNextScheduleTime } from "@/lib/utils";
 
 
 export const PATCH = safeAPI(async (req: Request, session: FrostSession, { params }) => {
@@ -42,10 +42,10 @@ export const PATCH = safeAPI(async (req: Request, session: FrostSession, { param
 
     } else if (status === CampaignStatus.ACTIVE) {
       // 2. ACTIVE: Reschedule / Resume
-      const { mailSendingTime, sendOnWeekends } = await tx.preferences.findUnique({
+      const { mailSendingTime, timezone, sendOnWeekends } = await tx.preferences.findUnique({
         where: { userId: session.user.id },
-        select: { mailSendingTime: true, sendOnWeekends: true }
-      }) || { mailSendingTime: "09:00", sendOnWeekends: false };
+        select: { mailSendingTime: true, timezone: true, sendOnWeekends: true }
+      }) || { mailSendingTime: "09:00", timezone: "Asia/Kolkata", sendOnWeekends: false };
 
       // Get all Active contacts
       const contacts = await tx.contact.findMany({
@@ -90,27 +90,9 @@ export const PATCH = safeAPI(async (req: Request, session: FrostSession, { param
           let targetTime: Date;
 
           if (nextSeq === 1) {
-            targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
+            targetTime = getFirstScheduleTime(mailSendingTime, timezone, sendOnWeekends);
           } else {
-            if (lastLog && lastLog.sequence === nextSeq - 1 && lastLog.sentAt) {
-              const delayDays = nextStep.delay;
-              targetTime = new Date(lastLog.sentAt);
-              targetTime.setDate(targetTime.getDate() + delayDays);
-
-              // Set specific time from preference
-              const [hours, minutes] = mailSendingTime.split(':').map(Number);
-              targetTime.setUTCHours(hours, minutes, 0, 0);
-
-              // Apply weekend check logic specifically here
-              targetTime = adjustForWeekend(targetTime, sendOnWeekends);
-
-              // Catch up
-              if (targetTime.getTime() < Date.now()) {
-                targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
-              }
-            } else {
-              targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
-            }
+            targetTime = getNextScheduleTime(mailSendingTime, timezone, sendOnWeekends, lastLog?.sentAt || new Date(), nextStep.delay);
           }
 
           logsToCreate.push({

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { safeAPI } from "@/lib/api";
 import prisma from "@/lib/prisma";
 import { FrostSession } from "@/types";
-import { getOffsetMs, adjustTime } from "@/lib/utils";
 import { z } from "zod";
 
 interface PreferencesPayload {
@@ -31,13 +30,11 @@ export const PATCH = safeAPI(async (req: Request, session: FrostSession) => {
   const data = body as PreferencesPayload;
 
   const validatedData = preferencesSchema.parse(data);
-  const offset = getOffsetMs(validatedData.timezone);
-  const utcTime = adjustTime(validatedData.mailSendingTime, -offset);
 
   const preferencesData = {
     stopAllCompanyMailsOnReply: validatedData.stopAllCompanyMailsOnReply,
     timezone: validatedData.timezone,
-    mailSendingTime: utcTime,
+    mailSendingTime: validatedData.mailSendingTime,
     sendOnWeekends: validatedData.sendOnWeekends,
   };
 

@@ -3,7 +3,7 @@ import { safeAPI } from "@/lib/api";
 import prisma from "@/lib/prisma";
 import { FrostError, FrostSession } from "@/types";
 import { EmailLogStatus } from "@/generated/prisma/enums";
-import { adjustForWeekend, getScheduleTime } from "@/lib/utils";
+import { getNextScheduleTime } from "@/lib/utils";
 
 
 export const DELETE = safeAPI(async (req: Request, session: FrostSession, { params }) => {
@@ -63,10 +63,10 @@ export const PATCH = safeAPI(async (req: Request, session: FrostSession, { param
 
   if (campaignTemplate.sequence === 1) return new NextResponse(null, { status: 204 });
 
-  const { mailSendingTime, sendOnWeekends } = await prisma.preferences.findUnique({
+  const { mailSendingTime, timezone, sendOnWeekends } = await prisma.preferences.findUnique({
     where: { userId: session.user.id },
-    select: { mailSendingTime: true, sendOnWeekends: true }
-  }) || { mailSendingTime: "09:00", sendOnWeekends: false };
+    select: { mailSendingTime: true, timezone: true, sendOnWeekends: true }
+  }) || { mailSendingTime: "09:00", timezone: "Asia/Kolkata", sendOnWeekends: false };
 
   const pendingLogs = await prisma.emailLog.findMany({
     where: {
@@ -93,14 +93,7 @@ export const PATCH = safeAPI(async (req: Request, session: FrostSession, { param
     const prevLog = log.contact?.emailLogs[0];
     if (!prevLog?.sentAt) return null;
 
-    const delayMs = delay * 24 * 60 * 60 * 1000;
-    let targetTime = new Date(prevLog.sentAt.getTime() + delayMs);
-
-    targetTime = adjustForWeekend(targetTime, sendOnWeekends);
-
-    if (targetTime.getTime() < Date.now()) {
-      targetTime = getScheduleTime(mailSendingTime, sendOnWeekends);
-    }
+    const targetTime = getNextScheduleTime(mailSendingTime, timezone, sendOnWeekends, prevLog.sentAt, delay);
 
     return () => prisma.emailLog.update({
       where: { id: log.id },

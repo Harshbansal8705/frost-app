@@ -3,7 +3,7 @@ import { safeAPI } from "@/lib/api";
 import prisma from "@/lib/prisma";
 import { FrostError, FrostSession } from "@/types";
 import { CampaignStatus, EmailLogStatus, Status } from "@/generated/prisma/enums";
-import { getScheduleTime } from "@/lib/utils";
+import { getFirstScheduleTime } from "@/lib/utils";
 
 
 export const POST = safeAPI(async (req: Request, session: FrostSession, { params }) => {
@@ -57,10 +57,10 @@ export const POST = safeAPI(async (req: Request, session: FrostSession, { params
   });
 
   // Get User Preferences
-  const { mailSendingTime, sendOnWeekends } = await prisma.preferences.findUnique({
+  const { mailSendingTime, timezone, sendOnWeekends } = await prisma.preferences.findUnique({
     where: { userId: user.id },
-    select: { mailSendingTime: true, sendOnWeekends: true }
-  }) || { mailSendingTime: "09:00", sendOnWeekends: false };
+    select: { mailSendingTime: true, timezone: true, sendOnWeekends: true }
+  }) || { mailSendingTime: "09:00", timezone: "Asia/Kolkata", sendOnWeekends: false };
 
   // Only schedule the first mail (Sequence 1)
   const firstStep = await prisma.campaignTemplate.findFirst({
@@ -75,7 +75,7 @@ export const POST = safeAPI(async (req: Request, session: FrostSession, { params
         contactId: newContact.id,
         sequence: 1,
         status: EmailLogStatus.SCHEDULED,
-        scheduledAt: getScheduleTime(mailSendingTime, sendOnWeekends)
+        scheduledAt: getFirstScheduleTime(mailSendingTime, timezone, sendOnWeekends)
       }
     });
   }
