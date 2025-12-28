@@ -118,13 +118,11 @@ export const POST = safeAPI(async (req: Request, session: FrostSession, { params
 
     if (!createdStep) throw new FrostError("Some error occurred", 500);
 
-    const delayMs = createdStep.delay * 24 * 60 * 60 * 1000;
-
     for (const contact of validContacts) {
       const previousLog = contact.emailLogs[0];
       if (!previousLog) continue;
       validContactIds.push(contact.id);
-      scheduleMap[contact.id] = getNextScheduleTime(mailSendingTime, timezone, sendOnWeekends, previousLog.sentAt || new Date(), delayMs);
+      scheduleMap[contact.id] = getNextScheduleTime(mailSendingTime, timezone, sendOnWeekends, previousLog.sentAt || new Date(), createdStep.delay);
     }
 
     if (validContactIds.length > 0) {
