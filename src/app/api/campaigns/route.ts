@@ -76,7 +76,7 @@ export const POST = safeAPI(async (req: Request, session: FrostSession) => {
               id: templateId
             }
           },
-          sequence: i,
+          sequence: i + 1,
           delay: i ? step.delay : 0,
         }
       });
