@@ -58,6 +58,7 @@ export default function ContactStatusCell({ id, status: initialStatus }: Contact
         <option value="REPLIED" className="bg-slate-900 text-emerald-400">Replied</option>
         <option value="BOUNCED" className="bg-slate-900 text-red-400">Bounced</option>
         <option value="RESPONDED_BACK" className="bg-slate-900 text-emerald-400">Responded Back</option>
+        <option value="FAILED" className="bg-slate-900 text-red-400">Failed</option>
       </select>
 
       <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
