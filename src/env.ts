@@ -13,6 +13,10 @@ const envSchema = z.object({
   SMTP_USER: z.string().min(1),
   SMTP_PASS: z.string().min(1),
   SMTP_FROM: z.email(),
+  R2_ACCOUNT_ID: z.string().min(1),
+  R2_ACCESS_KEY_ID: z.string().min(1),
+  R2_SECRET_ACCESS_KEY: z.string().min(1),
+  R2_BUCKET_NAME: z.string().min(1),
 }).transform((data) => ({
   ...data,
   DIRECT_URL: data.DIRECT_URL || data.DATABASE_URL,

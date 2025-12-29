@@ -7,6 +7,7 @@ import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { Template } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { useFrostFetch } from "@/hooks/useFrostFetch";
+import { getUploadUrl } from "@/app/actions";
 
 interface TemplateFormProps {
   initialData?: {
@@ -29,22 +30,30 @@ export function TemplateForm({ initialData, templateId, onSuccess, onCancel }: T
   const { frostFetch } = useFrostFetch();
 
   const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    setIsUploading(true);
-    const uploadFormData = new FormData();
-    uploadFormData.append("file", file);
+      setIsUploading(true);
+      // 1. Get the secure link
+      const { file: attachment, signedUrl } = await getUploadUrl(file.name, file.type);
 
-    await frostFetch<{ url: string }>("/api/upload", {
-      method: "POST",
-      body: uploadFormData,
-      onSuccess: (data) => {
-        setAttachments(prev => [...prev, data.url]);
-      }
-    });
-    setIsUploading(false);
-    e.target.value = "";
+      // 2. Upload directly to Cloudflare
+      await fetch(signedUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      setAttachments(prev => [...prev, attachment]);
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Failed to upload file:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
   };
 
   const removeAttachment = (index: number) => {
