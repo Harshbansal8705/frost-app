@@ -78,7 +78,7 @@ export const DELETE = safeAPI(async (req: Request, session: FrostSession, { para
   }
 
   if (template._count.campaigns > 0) {
-    throw new FrostError("Template is linked with a campaign and cannot be unlinked or deleted.", 400);
+    throw new FrostError("Template is linked with a campaign and cannot be deleted.", 400);
   }
 
   await prisma.template.delete({

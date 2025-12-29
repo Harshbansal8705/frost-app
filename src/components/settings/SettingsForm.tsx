@@ -247,7 +247,7 @@ export function SettingsForm({ initialData }: { initialData: SettingsData }) {
                   />
                   <HelperText>
                     Your email address (e.g. user@gmail.com). <br />
-                    <span className="text-amber-500/80">Note: For Gmail SMTP, this must be the same as your email address.</span>
+                    <span className="text-amber-500/80">Note: For Gmail SMTP, this would be the same as your email address.</span>
                   </HelperText>
                 </div>
                 <div className="md:col-span-1">
