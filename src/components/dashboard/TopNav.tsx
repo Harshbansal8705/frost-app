@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, User } from "lucide-react";
+import { User } from "lucide-react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 
@@ -9,18 +9,7 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-white/10 bg-slate-950/50 backdrop-blur-xl px-6 transition-all">
-      {/* Search Bar (Visual only for now) */}
-      <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-        <input
-          type="text"
-          placeholder="Search campaigns, leads..."
-          className="h-9 w-full rounded-md border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
-        />
-      </div>
-
       <div className="flex flex-1 justify-end items-center gap-4">
-
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-medium text-white">{session?.user?.name || session?.user?.email || "User"}</p>
