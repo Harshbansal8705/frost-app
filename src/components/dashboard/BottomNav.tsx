@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
   Send,
   FileText,
   Settings,
@@ -11,7 +10,6 @@ import {
 import clsx from "clsx";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard" as const, icon: LayoutDashboard },
   { name: "Campaigns", href: "/dashboard/campaigns" as const, icon: Send },
   { name: "Templates", href: "/dashboard/templates" as const, icon: FileText },
   { name: "Settings", href: "/dashboard/settings" as const, icon: Settings },
