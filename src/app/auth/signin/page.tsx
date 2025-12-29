@@ -7,15 +7,6 @@ import { useSearchParams } from "next/navigation"
 export default function SignInPage() {
   const searchParams = useSearchParams()
   const error = searchParams.get("error")
-  const [email, setEmail] = useState("")
-  const [loading, setLoading] = useState(false)
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    await signIn("email", { email, callbackUrl: "/" })
-    setLoading(false)
-  }
 
   const handleGoogleSignIn = () => {
     signIn("google", { callbackUrl: "/" })
@@ -69,39 +60,6 @@ export default function SignInPage() {
               </svg>
               Sign in with Google
             </button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-[#0a0a0a]/0 px-2 text-gray-500 bg-clip-padding backdrop-blur-xl">Or continue with email</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleEmailSignIn} className="space-y-4">
-              <div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  required
-                  className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all font-light"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-12 bg-linear-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-medium rounded-xl transition-all shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] hover:shadow-[0_0_25px_-5px_rgba(79,70,229,0.6)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-                ) : (
-                  "Sign in with Email"
-                )}
-              </button>
-            </form>
           </div>
         </div>
       </div>

@@ -1,5 +1,4 @@
 import GoogleProvider from "next-auth/providers/google"
-import EmailProvider from "next-auth/providers/email"
 import { env } from "@/env"
 import { NextAuthOptions } from "next-auth"
 
@@ -24,17 +23,6 @@ export const authOptions: NextAuthOptions = {
         }
       }
     }),
-    EmailProvider({
-      server: {
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        auth: {
-          user: env.SMTP_USER,
-          pass: env.SMTP_PASS
-        }
-      },
-      from: env.SMTP_FROM
-    })
   ],
   session: {
     strategy: "jwt",
