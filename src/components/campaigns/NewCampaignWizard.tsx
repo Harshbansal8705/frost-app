@@ -349,13 +349,13 @@ export function NewCampaignWizard() {
                               loadTemplate(idx, e.target.value);
                             }
                           }}
-                          className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none"
+                          className="flex-1 bg-slate-900/50 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none cursor-pointer"
                         >
-                          <option value="" disabled>Select a template...</option>
-                          <option value="NEW">+ Create New Template</option>
-                          <option disabled>──────────</option>
+                          <option value="" disabled className="bg-slate-900 text-slate-500">Select a template...</option>
+                          <option value="NEW" className="bg-slate-900 text-cyan-400 font-medium">+ Create New Template</option>
+                          <option disabled className="bg-slate-900 text-slate-700">──────────</option>
                           {templates.map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
+                            <option key={t.id} value={t.id} className="bg-slate-900 text-white">{t.name}</option>
                           ))}
                         </select>
                       </div>
@@ -419,13 +419,13 @@ export function NewCampaignWizard() {
                           loadTemplate(formData.sequence.length, e.target.value);
                         }
                       }}
-                      className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none"
+                      className="w-full bg-slate-900/50 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none cursor-pointer"
                     >
-                      <option value="" disabled>Choose a template...</option>
-                      <option value="NEW">+ Create New Template</option>
-                      <option disabled>──────────</option>
+                      <option value="" disabled className="bg-slate-900 text-slate-500">Choose a template...</option>
+                      <option value="NEW" className="bg-slate-900 text-cyan-400 font-medium">+ Create New Template</option>
+                      <option disabled className="bg-slate-900 text-slate-700">──────────</option>
                       {templates.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                        <option key={t.id} value={t.id} className="bg-slate-900 text-white">{t.name}</option>
                       ))}
                     </select>
                   </div>
