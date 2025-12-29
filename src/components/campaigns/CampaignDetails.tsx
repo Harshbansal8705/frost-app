@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from "react";
-import { Plus, Trash2, FilePlus } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Trash2, FilePlus, Upload } from "lucide-react";
 import { Template } from "@/types";
+import { parseLeadsFromCsv } from "@/lib/csv";
 import { useFrostFetch } from "@/hooks/useFrostFetch";
 import { CampaignStatus } from "@/generated/prisma/enums";
 import { Contact } from "@/generated/prisma/client";
@@ -138,10 +139,42 @@ export const ContactsActions = ({ campaignId }: { campaignId: string }) => {
   const [company, setCompany] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { frostFetch } = useFrostFetch();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const { leads: parsedLeads, skippedCount } = await parseLeadsFromCsv(file);
+
+      if (parsedLeads.length > 0) {
+        await frostFetch<{ count: number }>(`/api/campaigns/${campaignId}/contacts/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leads: parsedLeads }),
+          onSuccess: (data) => {
+            const successMsg = `Imported ${data.count} leads` + (skippedCount > 0 ? `. Skipped ${skippedCount} invalid rows (missing Name, Email or Company).` : ".");
+            toast.success(successMsg);
+            setIsOpen(false);
+          },
+        });
+      } else {
+        toast.error("No valid leads found. Ensure your CSV has 'name', 'email', and 'company' columns.");
+      }
+    } catch (error) {
+      toast.error("Failed to parse CSV: " + (error instanceof Error ? error.message : "Unknown error"));
+    } finally {
+      setIsSubmitting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !company) return;
+    if (!email || !company || !name) return;
 
     setIsSubmitting(true);
     await frostFetch<Contact>(`/api/campaigns/${campaignId}/contacts`, {
@@ -161,13 +194,31 @@ export const ContactsActions = ({ campaignId }: { campaignId: string }) => {
 
   return (
     <div className="relative">
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        className="gap-2 px-3 py-1.5 text-xs font-semibold h-auto"
-      >
-        <Plus size={14} />
-        Add Contact
-      </Button>
+      <div className="flex gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept=".csv"
+          onChange={handleFileUpload}
+        />
+        <Button
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isSubmitting}
+          className="gap-2 px-3 py-1.5 text-xs font-semibold h-auto border-dashed border-slate-600 text-slate-400 hover:text-white hover:border-cyan-500 hover:bg-cyan-950/30"
+        >
+          <Upload size={14} />
+          Import CSV
+        </Button>
+        <Button
+          onClick={() => setIsOpen(!isOpen)}
+          className="gap-2 px-3 py-1.5 text-xs font-semibold h-auto"
+        >
+          <Plus size={14} />
+          Add Contact
+        </Button>
+      </div>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 border border-white/10 rounded-xl shadow-xl p-4 z-50">
@@ -175,7 +226,8 @@ export const ContactsActions = ({ campaignId }: { campaignId: string }) => {
             <h3 className="text-white text-sm font-semibold mb-1">New Contact</h3>
             <input
               type="text"
-              placeholder="Name"
+              placeholder="Name *"
+              required
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"

@@ -25,7 +25,7 @@ export const POST = safeAPI(async (req: Request, session: FrostSession, { params
     throw new FrostError("Campaign not found", 404);
   }
 
-  if (!companyName) throw new FrostError("Company name is required", 400);
+  if (!name || !email || !companyName) throw new FrostError("Invalid data", 400);
 
   // Find or create company
   let companyId = "";
@@ -48,7 +48,7 @@ export const POST = safeAPI(async (req: Request, session: FrostSession, { params
   const newContact = await prisma.contact.create({
     data: {
       email,
-      name: name || "",
+      name: name,
       userId: user.id,
       campaignId: campaignId,
       companyId: companyId,

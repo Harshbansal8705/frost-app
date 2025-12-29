@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ArrowRight, Check, FileText, Users, Rocket, Plus, Trash2, Paperclip, X } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ArrowRight, Check, FileText, Users, Rocket, Plus, Trash2, Paperclip, X, Upload } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { TemplateForm } from "@/components/templates/TemplateForm";
 import { Button } from "@/components/ui/Button";
 import { useFrostFetch } from "@/hooks/useFrostFetch";
 import { Template, Lead, SequenceStep } from "@/types";
+import { parseLeadsFromCsv } from "@/lib/csv";
 import { Campaign } from "@/generated/prisma/client";
 
 
@@ -109,8 +110,34 @@ export function NewCampaignWizard() {
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
   // --- Manual Lead Entry ---
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const { leads: parsedLeads, skippedCount } = await parseLeadsFromCsv(file);
+
+      if (parsedLeads.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          leads: [...prev.leads, ...parsedLeads]
+        }));
+        const successMsg = `Imported ${parsedLeads.length} leads` + (skippedCount > 0 ? `. Skipped ${skippedCount} invalid rows (missing Name, Email or Company).` : ".");
+        toast.success(successMsg);
+      } else {
+        toast.error("No valid leads found. Ensure your CSV has 'name', 'email', and 'company' columns.");
+      }
+    } catch (error) {
+      toast.error("Failed to parse CSV: " + (error instanceof Error ? error.message : "Unknown error"));
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const addLead = () => {
-    if (!newLead.email) return;
+    if (!newLead.email || !newLead.name || !newLead.company) return;
     setFormData(prev => ({
       ...prev,
       leads: [...prev.leads, newLead]
@@ -218,13 +245,32 @@ export function NewCampaignWizard() {
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-8">
               <h3 className="text-xl font-bold text-white mb-2">Add Leads</h3>
-              <p className="text-slate-400">Manually add contacts to your campaign.</p>
+              <p className="text-slate-400">Manually add contacts or import from CSV.</p>
+            </div>
+
+            {/* Actions Bar */}
+            <div className="flex justify-end mb-4">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".csv"
+                onChange={handleFileUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="border-dashed border-slate-600 text-slate-400 hover:text-white hover:border-cyan-500 hover:bg-cyan-950/30 gap-2"
+              >
+                <Upload size={16} />
+                Import CSV
+              </Button>
             </div>
 
             {/* Manual Entry Form */}
             <div className="flex gap-3 mb-8 bg-black/20 p-4 rounded-xl border border-white/5 items-end">
               <div className="flex-1">
-                <label className="block text-xs font-medium text-slate-400 mb-1">Name</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Name <span className="text-red-500">*</span></label>
                 <input
                   value={newLead.name}
                   onChange={e => setNewLead({ ...newLead, name: e.target.value })}
@@ -233,7 +279,7 @@ export function NewCampaignWizard() {
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-medium text-slate-400 mb-1">Email</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Email <span className="text-red-500">*</span></label>
                 <input
                   value={newLead.email}
                   onChange={e => setNewLead({ ...newLead, email: e.target.value })}
@@ -242,7 +288,7 @@ export function NewCampaignWizard() {
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-medium text-slate-400 mb-1">Company</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Company <span className="text-red-500">*</span></label>
                 <input
                   value={newLead.company}
                   onChange={e => setNewLead({ ...newLead, company: e.target.value })}
@@ -252,7 +298,7 @@ export function NewCampaignWizard() {
               </div>
               <Button
                 onClick={addLead}
-                disabled={!newLead.email}
+                disabled={!newLead.email || !newLead.name || !newLead.company}
                 className="h-9 px-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Add
